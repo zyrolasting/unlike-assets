@@ -1,14 +1,17 @@
 #lang racket/base
 
 (require
+  racket/class
   racket/list
   racket/path
   racket/dict
   racket/function
   net/url
-  "./logging.rkt")
-
+  "logging.rkt")
 (provide (all-defined-out))
+
+(define (clarify/multi compiler entries)
+  (map (λ (uc) (send compiler clarify uc)) entries))
 
 (define (local-asset-url? str)
   (and (string? str)
@@ -46,5 +49,8 @@
                            (simplify-path (build-path relative-to path))
                            path)))))
 
-(define (thunk*/with other . head)
-  (λ tail (apply other (append head tail))))
+(define (chain proc . args)
+  (λ (clear compiler) (apply proc args)))
+
+(define (block r/c d/c d/h) (first d/h))
+(define (rebuild r/c d/c d/h) (last d/h))

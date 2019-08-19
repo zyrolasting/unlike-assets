@@ -1,18 +1,18 @@
 #lang racket/base
 
-;;; Translates a command line to a compilation.
-
 (require
+  racket/class
+  racket/control
   racket/cmdline
   racket/dict
   raco/command-name
   "private/assets.rkt"
-  "private/compiler.rkt"
-  "logging.rkt")
+  "private/unlike-compiler.rkt"
+  "logging.rkt"
+  "policy.rkt")
 
 (define spec-module-path     (make-parameter (build-path "?")))
 (define initial-asset-paths  (make-parameter null))
-(define exitcode             (make-parameter 0))
 (define ENOENT 2)
 (define EINVAL 22)
 (define EPROTO 71) ; For representing non-zero errors during build.
@@ -41,54 +41,38 @@
       (spec-module-path policy-module)
       (initial-asset-paths asset-refs))))
 
-(define (module-not-found e)
-  (<fatal "Could not load policy module: ~a~n~a" (spec-module-path) e)
-  (exitcode ENOENT))
 
-(define (compile-single clarify resolve entries)
-  (define entry (list-ref entries 0))
-  (with-handlers ([exn? <error])
-    (compile-unlike clarify resolve entry)
-    (<info "Finished ~a" entry)))
+(define (load-compiler)
+  (define (module-not-found e)
+    (<fatal "Could not load policy module: ~a~n~a~n" (spec-module-path) e))
+  (with-handlers ([exn:fail:filesystem? module-not-found])
+    (dynamic-require (spec-module-path) 'compiler)))
 
-(define (compile-multiple clarify resolve entries)
-  (for ([(k v)
-         (in-dict (compile-all-unlike clarify resolve entries))])
-        (if (exn? v)
-            (<error v)
-            (<info "Finished ~a" k))))
+(define (run-compiler compiler entries)
+  (if (= (length entries) 0)
+    (<fatal "No assets to process.")
+    (begin
+      (for ([clear (clarify/multi compiler entries)])
+           (send compiler add! clear))
+      (for ([(k v) (in-hash (send compiler compile!))])
+           (<info "~a -> ~a" k v)))))
 
-(define counts
-  (with-report/counts
+(define (build)
+  (define compiler (load-compiler))
+  (if (is-a? compiler unlike-compiler%)
+    (run-compiler compiler (initial-asset-paths))
+    (<fatal "Expected subclass of unlike-compiler%. Got ~a" compiler)))
+
+(define (prepare-report)
+  (define counts (with-report/counts build))
+  (define nwarnings (dict-ref counts 'warning 0))
+  (define nerrors (+ (dict-ref counts 'error 0)
+                     (dict-ref counts 'fatal 0)))
+  (with-report/void
     (λ ()
-      (<debug "Policy module: ~s" (spec-module-path))
-      (<debug "Initial assets: ~s" (initial-asset-paths))
+      (<info "# warnings: ~a" nwarnings)
+      (<info "# errors:   ~a" nerrors)))
 
-      (define entries (initial-asset-paths))
-      (define (import-from-policy sym)
-        (with-handlers ([exn:fail:filesystem? module-not-found])
-          (dynamic-require (spec-module-path) sym)))
+  (if (> nerrors 0) 1 0))
 
-      (define resolve (import-from-policy 'resolve))
-      (define clarify (import-from-policy 'clarify))
-
-      (case (length entries)
-        [(0)
-          (<fatal "No assets to process.")
-          (exitcode ENOENT)]
-        [(1) (compile-single clarify resolve entries)]
-        [else (compile-multiple clarify resolve entries)]))))
-
-(define nwarnings (dict-ref counts 'warning 0))
-(define nerrors (+ (dict-ref counts 'error 0)
-                   (dict-ref counts 'fatal 0)))
-
-(with-report/void
-  (λ ()
-    (<info "# warnings: ~a" nwarnings)
-    (<info "# errors:   ~a" nerrors)))
-
-(when (= (exitcode) 0)
-  (exitcode (if (> nerrors 0) EPROTO 0)))
-
-(exit (exitcode))
+(exit (prepare-report))

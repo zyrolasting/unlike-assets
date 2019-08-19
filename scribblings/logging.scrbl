@@ -1,4 +1,5 @@
 #lang scribble/manual
+@(require (for-label racket racket/class unlike-assets unlike-assets/logging))
 
 @title{Logging}
 
@@ -8,11 +9,13 @@ The behavior of @racket[unlike-assets] is difficult to trace without logging, he
 You should use this module with your own build process to ensure consistent output, especially
 when using the CLI.
 
-@section{Logger interface}
+@section{Basic Interface}
 
 @defthing[unlike-assets-logger logger?]{
 This logger uses the @racket['unlike-assets] topic, has no parent, and subscribes to all levels of detail.}
 
+@defproc[(make-child-logger) logger?]{
+Creates a child of @racket[unlike-assets-logger] on the same topic.}
 
 @deftogether[(
 @defproc[(<fatal [message-fmt string?] [v any/c] ...) void?]
@@ -42,19 +45,11 @@ Equivalent to:
                [message string?]
                [data any/c])
                void?]{
-Equivalent to:
-
-@racketblock[
-(log-message unlike-assets-logger
-             level
-             'unlike-assets
-             message
-             data
-             "unlike-assets")
-]
+A specialized wrapper around @racket[log-message] for @racket[unlike-assets-logger].
+Use this when leveraging multiple threads with @racket[prescribed-prefix].
 }
 
-@section{Building reports}
+@section{Building Reports}
 
 @defproc[(with-report [proc (-> any/c)]) (values any/c dict?)]{
 Calls @racket[proc] such that any log messages sent to @racket[unlike-logger]
@@ -75,8 +70,7 @@ Like @racket[with-report], except the return values are discarded.}
 Like @racket[with-report], except only the event counts dictionary is returned.}
 
 
-@section[#:tag "params"]{Logging Display Parameters}
-
+@section[#:tag "params"]{Display Parameters}
 @defthing[show-debug? (parameter/c boolean?) #:value #f]{
 Informs receivers if @racket['debug] events should be displayed to the end user.}
 
@@ -104,9 +98,13 @@ Controls which levels are forwarded to @racket[(current-error-port)] be default.
 change this if you want to (not) count warnings as errors or constrict STDOUT to a single level without
 using another process.}
 
+@defthing[prescribed-prefix (parameter/c string?) #:value ""]{
+A string prefix applied to every message. This is useful in things like multi-threaded
+builds where each thread needs to identify itself.
+}
 
 @deftogether[(
 @defthing[format-clear (parameter/c (-> clear/c any/c)) #:value identity]
-@defthing[format-unclear (parameter/c (-> string? any/c)) #:value identity])]{
+@defthing[format-unclear (parameter/c (-> unclear/c any/c)) #:value identity])]{
 These procedures prepare clear and unclear dependency references for placement in a log message.
-The output will be formatted in @racket[display] mode.}
+The output will be printed in @racket[display] mode.}

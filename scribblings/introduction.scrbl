@@ -1,4 +1,5 @@
 #lang scribble/base
+#
 @require[scriblib/footnote]
 
 @define-footnote[trinity-note mark-note]

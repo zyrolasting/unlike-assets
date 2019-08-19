@@ -1,115 +1,99 @@
 #lang scribble/manual
+@require[@for-label[unlike-assets racket racket/class]]
 
 @title{Fundamentals}
 
-@defstruct[dependent ([val any/c] [dependencies (listof string?)])]{
-Represents data or a procedure that cannot run until dependencies
-are available for its use.
-
-A @racket[dependent] is either @italic{fulfilled} or @italic{unfulfilled}. The
-implementation details must follow only these rules:
-
-@itemlist[
-@item{If fulfilled, @racket[val] is not a procedure. This state is final.}
-@item{If unfulfilled, @racket[val] is a procedure that returns a new, @italic{advanced} @racket[dependent] in an unfulfilled or fulfilled state.}
-@item{All dependencies must be fulfilled before advancing a @racket[dependent] (This disallows circular dependencies).}]
-
-@racket[dependencies] are @italic{unclear} strings that refer to other
-instances of @racket[dependent]. Because this collection deals in assets with
-arbitrary relationships, unclear strings must be made unique and unambiguous
-(or @italic{clear}) using a user-provided @racket[clarify] function with @racket[compile-unlike].
-More on that in a moment.}
-
 @deftogether[(
-@defthing[clear/c (generic-instance/c gen:equal+hash)]
-@defstruct[(unlike-asset dependent) ([requested-as clear/c])]
+@defthing[unclear/c string?]
+@defthing[clear/c (or/c string? symbol? url? path? (generic-instance/c gen:equal+hash))]
+@defthing[fulfilled/c (not/c procedure?)]
+@defthing[advance/c (recursive-contract
+                      (-> clear/c (instanceof/c (subclass?/c unlike-compiler%)) unlike-asset/c))]
+@defthing[unlike-asset/c (or/c advance/c fulfilled/c)]
 )]{
-An @racket[unlike-asset] is a @racket[dependent] with a clear name.
-The exact data type used for clear names only matters to the extent that it
-can be compared with @racket[equal?] and be usable in a @racket[dict?]. Most
-of the time this can just be strings, but paths or other constrained types
-may also be useful.}
+An @racket[unlike-asset/c] value (henceforth "asset") is either @italic{fulfilled} or @italic{unfulfilled}.
+If unfulfilled, the asset is an @racket[advance/c] procedure that returns a new,
+@italic{advanced} asset in an unfulfilled or fulfilled state. If fulfilled,
+the asset is not a procedure at all. The fulfilled state is final.
 
-@defproc[(compile-unlike [clarify (-> string? clear/c)]
-                         [resolve (-> clear/c unlike-asset)]
-                         [entry string?])
-                         dict?]{
-@margin-note{@racket[compile-unlike] returns @bold{all} encountered assets. You may need to filter out unwanted entries to create custom distributions.}
-Advances the @racket[unlike-asset] produced by @racket[(resolve (clarify entry))] until it is fulfilled
-on the current thread. If any advanced asset lists new dependencies, those dependencies will be processed before returning to advance the dependent asset.
+In this collection, unlike assets may depend on one another. This is the status quo
+for any multimedia project such as video compositions, web pages, and video games.
+All dependencies must be fulfilled before advancing any asset, so no circular
+dependencies are allowed.
+
+Dependencies are referenced by freeform @italic{unclear} strings that describe other
+assets, like a URI or a relative path string. An instance of @racket[unlike-compiler%]
+must @method[unlike-compiler% clarify] these strings and @method[unlike-compiler% delegate] work to procedures that can fulfill the
+assets under the @racket[clear/c] names. An @racket[unlike-compiler%] instance can also mark changes
+on an asset's value and control how that change ripples to dependencies.}
+
+@defclass[unlike-compiler% object% ()]{
+
+An abstract class that coordinates asset fulfillment.
 
 Depending on your requirements and the complexity of your project, you may need to use custodians,
-threads, engines, places, or other constructs to coordinate different calls to @racket[compile-unlike].
+threads, engines, places, or other constructs to coordinate different instances of this class.
 
-Returns a @racket[dict?] with @racket[clear/c] keys with all fulfilled assets encountered in the process as values.
+@defmethod[(clarify [unclear unclear/c]) clear/c]
 
-The @racket[clarify] function accepts an @italic{unclear} string and returns @racket[clear/c]. If your
-assets all sit on a mounted file system, your representation will likely be complete, simplified paths. 
+Override this method to deterministically map an unclear string to a clear name for an asset.
+By default, @method[unlike-compiler% clarify] is the identity function.
 
-@racketblock[
-(define-runtime-path project-directory ".")
+Once assets have clear names we need to decide what to do with them by delegating work out
+to appropriate procedures.
 
-(define (unclear->clear unclear)
-  (define path (build-complete-simple-path unclear project-directory))
-  (unless (file-readable? tries)
-    (error 'clarify "Cannot clarify ~a~n  Path not readable: ~a" unclear path)))
-]
+@defmethod[(delegate [clear clear/c]) unlike-asset/c]{
 
-The @racket[resolve] function maps an output value from @racket[clarify] to
-a new @racket[unlike-asset] instance. You can use this oppurtunity to make decisions
-about what procedure is responsible for producing the first advanced version
-of the asset. Here is a complete example using some hypothetical procedures.
+Override this abstract method to deterministically return the
+@bold{first} value to represent an asset of name @racket[clear].
 
-@racketblock[
-(define-runtime-path project-directory "./assets")
+@margin-note{If you want your terminal value to be a procedure, wrap it in a @racket[box], @racket[list], etc.}
+If @method[unlike-compiler% delegate] returns an @racket[advance/c] procedure, that procedure must
+accept the same clear name and the instance of the compiler as arguments, and either return the
+@bold{next} @racket[advance/c] procedure to pass on responsibility, or a terminal value that
+isn't a procedure at all.
 
-(define (unclear->clear unclear)
-  (define path (build-complete-simple-path unclear project-directory))
-  (unless (file-readable? tries)
-    (error 'clarify "Cannot clarify ~a~n  Path not readable: ~a" unclear path)))
+Any procedure in the implied chain of fulfillment can (and should) @method[unlike-compiler% add!]
+dependencies to the compiler as they are discovered. If this occurs, the
+subsequent procedure will not be called until those dependencies are fulfilled.
 
-(define (clear->asset clear)
-  (unlike-asset
-    (case (path-get-extension path)
-        [(#".md") markdown->dependent-xexpr]
-        [(#".css") css->dependent-cssexpr]
-        [else copy-file/sha1-name])
-    null
-    clear))
-
-(compile-unlike unclear->clear clear->asset "index.md")
-]
-
-Note for emphasis that @racket[entry] is considered an @italic{unclear} dependency,
-and is subject to resolution against @racket[clarify]. In the above example, @racket["index.md"]
-is resolved relative to the @racket["./assets"] runtime path. This is done for behavioral
-consistency, but it is easy to forget this detail when using the command line:
-
-@verbatim[#:indent 2]|{
-$ raco build-unlike my-policy.rkt ./assets/index.md # whoops
-Cannot clarify ./assets/index.md
-  Path not readable: /home/sage/project/assets/assets/index.md
-  ...
-}|
-
-A way to remember this is that as the user, you are the first @racket[dependent] and your
-dependencies are therefore subject to clarification.
+Once clarified names can be used to delegate work to procedures, you can @method[unlike-compiler% compile!]
 }
 
-@defproc[(compile-all-unlike [clarify (-> string? clear/c)]
-                             [resolve (-> clear/c unlike-asset)]
-                             [entries (listof string?)])
-                             dict?]{
-Like @racket[compile-unlike], except multiple entry points are accepted and
-each entry maps to a thread that calls @racket[compile-unlike]. Blocks until
-all threads terminate.
+@defmethod[(compile! [#:changed changed (listof clear/c) null]
+                     [#:removed removed (listof clear/c) null])
+                     (hash/c clear/c fulfilled/c)]{
+Fulfills all assets on the current thread and returns a hash mapping clear names to the final value
+associated with each asset. Will raise @racket[exn:fail] if a call to @method[unlike-compiler% compile!] is already
+running for the instance.
 
-Returns a dictionary such that keys are the elements in @racket[entries] and the values
-are either:
+Side-effects:
 
 @itemlist[
-@item{The corresponding return value from @racket[compile-unlike].}
-@item{Any @racket[exn] raised from the call to @racket[compile-unlike] that may explain why that particular compilation failed.}]
+@item{The encapsulated model will record all asset activity.}
+@item{Events are sent to @racket[unlike-asset-logger].}
+]
 
-Each thread will identify themselves in the log using a prefix matching its corresponding element in @racket[entries].}
+If @racket[changed] or @racket[removed] are not empty, then the compiler will first modify
+the underlying model to reflect changed or removed assets according to @secref["live"].
+}
 
+
+@defmethod[(lookup [clear clear/c])
+                   unlike-asset/c]{
+Return the current value associated with a clear name in the compiler.
+Will raise @racket[exn:fail] if no asset is found.
+}
+
+@defmethod[(add! [clear clear/c] [dependent-clear (or/c clear/c boolean?) #f] [ripple (or/c ripple/c boolean?) #f]) void?]{
+Adds a clear asset name to the compiler. If @racket[dependent-clear] is a clear name,
+then the compiler will understand that @racket[clear] is a dependency of @racket[dependent-clear].
+Will raise @racket[exn:fail] if a circular dependency forms.
+
+@racket[ripple] controls how a change in @racket[clear]'s asset propagates to @racket[dependent-clear]'s asset.
+By default, the dependent asset will be rebuilt. Otherwise the change will produce an asset value from a provided
+@racket[ripple/c] procedure.
+
+For information on the change model, see @secref["live"].
+}
+}

@@ -7,4 +7,4 @@
 (define version "0.0")
 (define pkg-authors '(sage))
 (define raco-commands
-  '(("unlike-assets:build" unlike-assets/cli "Build assets by your policy" #f)))
+  '(("unlike-assets:build" (submod unlike-assets/cli main) "Build assets by your policy" #f)))

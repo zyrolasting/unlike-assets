@@ -99,8 +99,6 @@ Rebuilds both @racket["about.html"] and @racket["index.html"].
 (send compiler compile! #:changed '("contact.html"))
 ]
 
-Compile assuming that @racket["about.html"] has changed.
-
 The website is rebuilt assuming only @racket["contact.html"] has changed.
 The relationship between @racket["contact.html"] and @racket["about.html"]
 is such that the latter @bold{will not change} when the former changes. Not only

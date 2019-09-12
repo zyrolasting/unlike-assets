@@ -4,7 +4,7 @@
 @title{Command Line Interface}
 
 Use the provided raco command to build unlike assets from the terminal.
-Use @literal{raco compile-unlike -h} flag to see options.
+Use @literal{raco unlike-assets:build -h} flag to see options.
 
 @verbatim[#:indent 2]|{
 $ raco unlike-assets:build my-compiler.rkt news/index.php blog/index.md shop/index.html

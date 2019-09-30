@@ -1,5 +1,5 @@
 #lang scribble/manual
-@require[@for-label[unlike-assets racket racket/class]]
+@require[@for-label[unlike-assets unlike-assets/logging racket racket/class]]
 
 @title{Fundamentals}
 

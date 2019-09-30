@@ -31,12 +31,12 @@ had in an attempt to incorporate changes while minimizing rework.
 First, @racket[#:removed] assets are deleted from the graph, as well as any edges connecting that
 that asset to others. Dependent assets are unconditionally rebuilt, but changes ripple from there
 according to @secref["ripproc"].  The compiler will raise @racket[exn:fail] if any of the names
-marked as removed are already absent from the system.
+marked as removed are already absent from the graph.
 
 @racket[#:changed] assets then regress to a value returned from @method[unlike-compiler% delegate].
 This is functionally equivalent to marking an asset to rebuild from scratch. Changes will ripple to
 dependents according to @secref["ripproc"]. This process will raise @racket[exn:fail] if any
-@racket[#:changed] assets that were not marked as removed are absent from the system.
+@racket[#:changed] assets that were @bold{not} marked as removed are absent from the graph.
 
 
 @section[#:tag "ripproc"]{Ripple Procedures}
@@ -70,12 +70,12 @@ and prevent change from propogating further.
 @racketblock[
 (define (replace-link-node) '...)
 (define (immune changed/clear dependent/clear dependent/history) (car dependent-history))
-(define (rebuild changed/clear dependent/clear dependent/history) (last dependent-history))
+(define (always-rebuild changed/clear dependent/clear dependent/history) (last dependent-history))
 (define (partial changed/clear dependent/clear dependent/history) replace-link-node)
 
 (send compiler add! "index.html")
 (send compiler add! "styles.css")
-(send compiler add! "about.html" "index.html" rebuild)
+(send compiler add! "about.html" "index.html" always-rebuild)
 (send compiler add! "contact.html" "about.html" immune)
 
 (send compiler add! "styles.css" "about.html" partial)
@@ -111,7 +111,7 @@ stopped at @racket["about.html"]. In this scenario, only one webpage is fully re
 The website is rebuilt assuming only @racket["styles.css"] has changed.
 In this scenario, @racket["about.html"] and @racket["contact.html"] are @italic{partially} rebuilt assuming that
 @racket[replace-link-node] is in their respective histories. But @racket["index.html"] is still
-fully rebuilt becase @racket["about.html"] propagates change in that way.
+fully rebuilt becase @racket["about.html"] propagates change using @racket[always-rebuild].
 
 @racketblock[
 (send compiler compile! #:removed '("about.html"))
@@ -135,7 +135,7 @@ by this rebuild would ripple normally.
 @item{Always rebuilding dependents of a removed asset allows @racket[ripple/c] procedures
 to assume that dependencies exist. Any errors that come as a result of removal would
 happen as per the user's implementation and change propogation should not make it harder to find the root cause.}
-@item{@bold{CAUTION:} If you make a new instance of an @racket[unlike-compiler% subclass] and start
+@item{@bold{CAUTION:} If you make a new instance of an @racket[unlike-compiler%] subclass and start
 a fresh build using the same assets, it might not produce the same graph as an existing instance
 that removed assets from an older graph. This is a source of entropy that may warrant periodically
 discarding a compiler instance, collecting garbage, and beginning anew.}]

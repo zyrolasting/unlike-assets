@@ -9,7 +9,7 @@ $ raco doc unlike-assets # To view docs
 
 To run tests, run `raco test **/*.test.rkt` in the repository top-level directory.
 
-If this project helps you, please [show your support :heart: with a donation](https://www.paypal.com/paypalme2/sagegerard).
+For guaranteed support on short notice, consider [purchasing a subscription](https://sagegerard.com/subscribe.html).
 
 ## Planned features
 

@@ -209,4 +209,21 @@
                     ("secondary.html" . 4)
                     ("tertiary.html" . 4)
                     ("styles.css" . 0)
-                    ("behavior.js" . 0)))))
+                    ("behavior.js" . 0))))
+
+  (test-case "Use of non-strict"
+    (define counts 0)
+    (define compiler
+      (new (class unlike-compiler% (super-new)
+             (define/override (delegate clear)
+               (λ _ (set! counts (add1 counts)))))))
+
+    (send compiler add! "a")
+    (send compiler add! "b" "a")
+    (send compiler add! "c" "a")
+    (send compiler compile!)
+    (define ncalls counts)
+    (send compiler compile! #:changed '("z") #:strict? #f)
+    (send compiler compile! #:removed '("u") #:strict? #f)
+    (check-equal? ncalls counts)))
+

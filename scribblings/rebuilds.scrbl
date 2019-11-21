@@ -16,6 +16,7 @@ unless you report that there were changes.
 
 @racketblock[
 (send compiler compile!
+  #:strict? #t
   #:changed (clarify/multi compiler "/etc/config")
   #:removed (clarify/multi compiler
                            "leaked-xmas-photo.png"
@@ -28,16 +29,19 @@ call to @method[unlike-compiler% compile!] will adapt an underlying graph to ref
 since changed or removed. Depending on the activity, dependent assets will @italic{regress} to a value they once
 had in an attempt to incorporate changes while minimizing rework.
 
-First, @racket[#:removed] assets are deleted from the graph, as well as any edges connecting that
-that asset to others. Dependent assets are unconditionally rebuilt, but changes ripple from there
-according to @secref["ripproc"].  The compiler will raise @racket[exn:fail] if any of the names
-marked as removed are already absent from the system.
+First, @racket[#:removed] assets are deleted from the graph, as well as any
+edges connecting that that asset to others. Dependent assets are
+unconditionally rebuilt, but changes ripple from there according to
+@secref["ripproc"].  Unless @racket[strict?] is @racket[#f], this process will
+raise @racket[exn:fail] if any of the names marked as removed are already
+absent from the system.
 
-@racket[#:changed] assets then regress to a value returned from @method[unlike-compiler% delegate].
-This is functionally equivalent to marking an asset to rebuild from scratch. Changes will ripple to
-dependents according to @secref["ripproc"]. This process will raise @racket[exn:fail] if any
-@racket[#:changed] assets that were not marked as removed are absent from the system.
-
+@racket[#:changed] assets then regress to a value returned from
+@method[unlike-compiler% delegate].  This is functionally equivalent to marking
+an asset to rebuild from scratch. Changes will ripple to dependents according
+to @secref["ripproc"]. Unless @racket[strict?] is @racket[#f], this process
+will raise @racket[exn:fail] if any @racket[#:changed] assets that were not
+marked as removed are absent from the system.
 
 @section[#:tag "ripproc"]{Ripple Procedures}
 

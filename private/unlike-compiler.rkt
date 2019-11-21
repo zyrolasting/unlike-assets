@@ -39,10 +39,11 @@
               (or ripple (λ (from to history) (delegate to))))))
 
     (define/public (compile! #:changed [changed null]
-                             #:removed [removed null])
+                             #:removed [removed null]
+                             #:strict? [strict? #t])
       (change-guard 'compile! (λ _
-        (for ([ua removed]) (remove! ua))
-        (for ([ua (remove* removed changed)]) (change! ua (delegate ua)))
+        (for ([ua removed]) (remove! ua strict?))
+        (for ([ua (remove* removed changed)]) (change! ua (delegate ua) strict?))
         (let loop ()
           (define next (send assets get-first-advanceable))
           (if next
@@ -55,24 +56,30 @@
       (when changing (error sym "busy"))
       (dynamic-wind (λ _ (set! changing #t)) proc (λ _ (set! changing #f))))
 
-    (define/private (remove! clear)
-      (unless (has? clear) (error 'remove! "~a does not exist" clear))
-      (for ([dependent (send assets get-dependents clear)])
-        (change! dependent (delegate dependent)))
-      (send assets remove! clear))
+    (define/private (remove! clear strict?)
+      (if (has? clear)
+          (begin
+            (for ([dependent (send assets get-dependents clear)])
+              (change! dependent (delegate dependent) #t))
+            (send assets remove! clear))
+          (when strict?
+            (error 'remove! "~a does not exist" clear))))
 
-    (define/private (change! clear asset)
-      (unless (has? clear) (error 'change! "~a does not exist" clear))
-      (when asset (send assets update! clear asset))
-      (for ([dependent (send assets get-dependents clear)])
-         (define old dependent)
-         (define ripple-ok? (send assets regress! clear dependent (delegate dependent)))
-         (unless ripple-ok?
-           (<warning "A change to ~a did not relate to the history of ~a. Rebuilding from scratch..."
-                     (format-clear clear)
-                     (format-clear dependent)))
-         (unless (eq? old (lookup dependent))
-           (change! dependent #f))))
+    (define/private (change! clear asset strict?)
+      (if (has? clear)
+          (begin
+            (when asset (send assets update! clear asset))
+            (for ([dependent (send assets get-dependents clear)])
+              (define old dependent)
+              (define ripple-ok? (send assets regress! clear dependent (delegate dependent)))
+              (unless ripple-ok?
+                (<warning "A change to ~a did not relate to the history of ~a. Rebuilding from scratch..."
+                          (format-clear clear)
+                          (format-clear dependent)))
+              (unless (eq? old (lookup dependent))
+                (change! dependent #f #t))))
+          (when strict?
+            (error 'change! "~a does not exist" clear))))
 
     (define/private (advance! clear-name)
       (send assets progress! clear-name ((lookup clear-name) clear-name this)))))

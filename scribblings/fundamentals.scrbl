@@ -61,7 +61,8 @@ Once clarified names can be used to delegate work to procedures, you can @method
 }
 
 @defmethod[(compile! [#:changed changed (listof clear/c) null]
-                     [#:removed removed (listof clear/c) null])
+                     [#:removed removed (listof clear/c) null]
+                     [#:strict? strict? any/c #t])
                      (hash/c clear/c fulfilled/c)]{
 Fulfills all assets on the current thread and returns a hash mapping clear names to the final value
 associated with each asset. Will raise @racket[exn:fail] if a call to @method[unlike-compiler% compile!] is already

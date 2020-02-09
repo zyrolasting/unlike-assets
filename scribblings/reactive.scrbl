@@ -87,7 +87,7 @@ Nearly equivalent to the below:
 ]
 }
 
-@defproc[(make-u/a-build-system [key->live-build (-> any/c live-build?)]) u/a-build-system?]{
+@defproc[(make-u/a-build-system [key->live-build (-> any/c (-> any/c live-build?) live-build?)]) u/a-build-system?]{
 Returns a procedure @racket[S] that encapsulates a mutable hash of live builds.
 
 @racket[(S key)] will return a live build with the given key. If the

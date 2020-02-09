@@ -35,10 +35,9 @@ to other assets.
                       (-> clear/c (instanceof/c (subclass?/c unlike-compiler%)) unlike-asset/c))]
 @defthing[unlike-asset/c (or/c advance/c fulfilled/c)]
 )]{
-Let's rehash the above and the @secref{fundamentals} section in
-contract language in the context of this model.
+Let's rehash the fundamentals as contracts set by the context of this model.
 
-When asset value (as per @racket[unlike-asset/c]) is fulfilled, it's not a
+When an asset value (as per @racket[unlike-asset/c]) is fulfilled, it's not a
 procedure and its value is final. Otherwise, it is an
 @racket[advance/c] procedure that returns a new asset that is
 fulfilled or unfulfilled.

@@ -1,7 +1,31 @@
 #lang scribble/manual
-@require[@for-label[unlike-assets racket racket/class]]
+@require[@for-label[unlike-assets racket racket/class graph]]
 
-@title{Fundamentals}
+@title{Imperative Model}
+
+The imperative model uses Stephen Chang's
+@hyperlink["https://docs.racket-lang.org/graph/index.html"]{graph
+library} in a simple object model to track dependencies between assets
+and build them in order. This model is good for those who are used to
+classical object-oriented programming and/or anyone who wants to work
+on the underlying graph of their project as a whole.
+
+To use this model, you subclass @racket[unlike-compiler%] and
+override two methods called @method[unlike-compiler% clarify]
+and @method[unlike-compiler% delegate].
+
+@method[unlike-compiler% clarify] translates an string like @tt{styles.css} into an
+unambiguous identifier like an absolute path or full URL.  What
+counts as a clear or unclear name is up to you.
+
+@method[unlike-compiler% delegate] takes a clear name and maps it to
+the first procedure that must run to start building the asset of that
+name.  That procedure can identify dependencies of your asset and add
+them to the graph. So if you process an HTML file, then you can find
+dependencies in that file and queue them up for further processing.
+
+If an asset changes, you can also control how that change propogates
+to other assets.
 
 @deftogether[(
 @defthing[unclear/c string?]
@@ -11,24 +35,24 @@
                       (-> clear/c (instanceof/c (subclass?/c unlike-compiler%)) unlike-asset/c))]
 @defthing[unlike-asset/c (or/c advance/c fulfilled/c)]
 )]{
-An @racket[unlike-asset/c] value (henceforth "asset") is either @italic{fulfilled} or @italic{unfulfilled}.
-If unfulfilled, the asset is an @racket[advance/c] procedure that returns a new,
-@italic{advanced} asset in an unfulfilled or fulfilled state. If fulfilled,
-the asset is not a procedure at all. The fulfilled state is final.
+Let's rehash the above and the @secref{fundamentals} section in
+contract language in the context of this model.
 
-In this collection, unlike assets may depend on one another. This is the status quo
-for any multimedia project such as video compositions, web pages, and video games.
-All dependencies must be fulfilled before advancing any asset, so no circular
-dependencies are allowed.
+When asset value (as per @racket[unlike-asset/c]) is fulfilled, it's not a
+procedure and its value is final. Otherwise, it is an
+@racket[advance/c] procedure that returns a new asset that is
+fulfilled or unfulfilled.
 
-Dependencies are referenced by freeform @italic{unclear} strings that describe other
-assets, like a URI or a relative path string. An instance of @racket[unlike-compiler%]
-must @method[unlike-compiler% clarify] these strings and @method[unlike-compiler% delegate] work to procedures that can fulfill the
-assets under the @racket[clear/c] names. An @racket[unlike-compiler%] instance can also mark changes
-on an asset's value and control how that change ripples to dependencies.}
+An instance of @racket[unlike-compiler%] must @method[unlike-compiler%
+clarify] these strings and @method[unlike-compiler% delegate] work to
+procedures that can fulfill the assets under the @racket[clear/c]
+names. An @racket[unlike-compiler%] instance can also mark changes on
+an asset's value and control how that change ripples to dependencies.
+}
+
+@section{Imperative API Reference}
 
 @defclass[unlike-compiler% object% ()]{
-
 An abstract class that coordinates asset fulfillment.
 
 Depending on your requirements and the complexity of your project, you may need to use custodians,
@@ -98,3 +122,7 @@ By default, the dependent asset will be rebuilt. Otherwise the change will produ
 For information on the change model, see @secref["live"].
 }
 }
+
+@include-section["rebuilds.scrbl"]
+@include-section["cli.scrbl"]
+@include-section["examples.scrbl"]

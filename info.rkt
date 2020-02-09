@@ -1,7 +1,7 @@
 #lang info
 (define collection "unlike-assets")
 (define deps '("base" "file-watchers" "ansi-color" "graph-lib"))
-(define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
+(define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "graph-doc"))
 (define scribblings '(("scribblings/unlike-assets.scrbl" (multi-page))))
 (define pkg-desc "Build system for arbitrary assets")
 (define version "1.0")

@@ -21,12 +21,8 @@ If you are familiar with the JavaScript ecosystem,
 @racket[unlike-assets] is like Webpack, but leaner.
 
 @table-of-contents[]
-
 @include-section["fundamentals.scrbl"]
 @include-section["imperative.scrbl"]
 @include-section["reactive.scrbl"]
-@include-section["rebuilds.scrbl"]
 @include-section["logging.scrbl"]
 @include-section["policy.scrbl"]
-@include-section["cli.scrbl"]
-@include-section["examples.scrbl"]

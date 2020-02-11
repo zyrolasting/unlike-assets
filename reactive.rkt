@@ -28,7 +28,8 @@
   (define %producer
     (make-stateful-cell/async
      #:dependencies (list %signal)
-     (λ () (respond (%signal)))))
+     (λ () (with-handlers ([exn:break? void])
+             (respond (%signal))))))
   (make-live-build-proc
    (λ ()
      (define next-value (sample-change))

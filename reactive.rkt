@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require kinda-ferpy)
+(require (only-in racket/function curry)
+         kinda-ferpy)
 
 (provide start-live-build
          make-u/a-build-system
@@ -22,16 +23,29 @@
 (define-values (make-u/a-build-system-proc u/a-build-system?)
   (of-name "u/a-build-system"))
 
-(define (start-live-build sample-change respond [suppress? eq?])
+(define (<log level event target)
+  (log-message (current-logger)
+               level
+               'unlike-assets/reactive
+               (format "~a: ~a" event target)
+               target))
+
+
+(define <debug (curry <log 'debug))
+(define <info  (curry <log 'info))
+
+(define (start-live-build key sample-change respond [suppress? eq?])
   (define initial-value (sample-change))
   (define %signal (% initial-value))
   (define %producer
     (make-stateful-cell/async
      #:dependencies (list %signal)
-     (λ () (with-handlers ([exn:break? void])
+     (λ () (with-handlers ([exn:break? displayln])
+             (<info "UPDATE" key)
              (respond (%signal))))))
   (make-live-build-proc
    (λ ()
+     (<debug "SIGNAL" key)
      (define next-value (sample-change))
      (unless (suppress? (%signal) next-value)
        (%signal next-value))

@@ -1,9 +1,7 @@
 #lang info
-(define collection "unlike-assets")
+(define collection 'multi)
 (define deps '("base" "file-watchers" "ansi-color" "graph-lib" "kinda-ferpy"))
-(define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "graph-doc"))
-(define scribblings '(("scribblings/unlike-assets.scrbl" (multi-page))))
-(define pkg-desc "Build system for arbitrary assets")
+(define pkg-desc "Implementation for unlike-assets")
 (define version "1.1")
 (define pkg-authors '(sage))
 (define raco-commands

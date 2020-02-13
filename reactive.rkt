@@ -10,7 +10,8 @@
          get-live-build
          maybe-build-u/a-cell!
          wait-for-u/a-cell!
-         procure-u/a!)
+         procure-u/a!
+         apply-until)
 
 (define (of-name str)
   (let ([s (string->uninterned-symbol str)])
@@ -73,6 +74,14 @@
 
 (define (procure-u/a! sys u)
   ((wait-for-u/a-cell! sys u)))
+
+(define (not-proc? p)
+  (not (procedure? p)))
+
+(define (apply-until v [stop? not-proc?])
+  (if (stop? v)
+      v
+      (apply-until (v) stop?)))
 
 (module+ test
   (require rackunit)

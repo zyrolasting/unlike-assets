@@ -17,7 +17,7 @@ who prefer writing build procedures as pure functions that can defer
 certain side-effects.
 
 @bold{This module is experimental. Use the imperative model
-of you need a stable interface.}
+if you need a stable interface.}
 
 @section{Illustrative Example}
 

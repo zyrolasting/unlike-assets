@@ -19,6 +19,7 @@ with this project, you should use the latest version.
 ## Unreleased
 * Add reactive model
 * Reorganize docs to emphasize models
+* Divided source into several multi-collection packages.
 
 ## [1.0] - 2019-11-21
 * Add `#:strict?` keyword argument to compiler

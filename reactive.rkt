@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/function curry)
+(require (only-in racket/function curry identity)
          kinda-ferpy)
 
 (provide start-live-build
@@ -40,7 +40,7 @@
   (define %producer
     (make-stateful-cell/async
      #:dependencies (list %signal)
-     (λ () (with-handlers ([exn:break? displayln])
+     (λ () (with-handlers ([exn:break? identity])
              (<info "UPDATE" key)
              (respond (%signal))))))
   (make-live-build-proc

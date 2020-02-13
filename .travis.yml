@@ -33,7 +33,7 @@ before_install:
 - export PATH="${RACKET_DIR}/bin:${PATH}" #install-racket.sh can't set for us
 
 install:
- - raco pkg install --auto --name unlike-assets
+ - raco pkg install --auto --name ./unlike-assets-lib ./unlike-assets-doc ./unlike-assets-test
 
 before_script:
 
@@ -41,7 +41,7 @@ before_script:
 # `raco pkg install --deps search-auto` to install any required
 # packages without it getting stuck on a confirmation prompt.
 script:
- - raco test -x -p unlike-assets
+ - raco test -x -p unlike-assets-test
 
 after_success:
  - raco setup --check-pkg-deps --pkgs unlike-assets

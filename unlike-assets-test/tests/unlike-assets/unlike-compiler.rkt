@@ -7,8 +7,8 @@
    racket/list
    racket/string
    rackunit
-   "./assets.rkt"
-   "./unlike-compiler.rkt")
+   unlike-assets/private/assets
+   unlike-assets/private/unlike-compiler)
 
   (test-case
     "(delegate) example"
@@ -226,4 +226,3 @@
     (send compiler compile! #:changed '("z") #:strict? #f)
     (send compiler compile! #:removed '("u") #:strict? #f)
     (check-equal? ncalls counts)))
-

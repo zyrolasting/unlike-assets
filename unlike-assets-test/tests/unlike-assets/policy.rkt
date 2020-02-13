@@ -4,7 +4,7 @@
   (require
    rackunit
    net/url
-   "./policy.rkt")
+   unlike-assets/policy)
 
   (test-equal?
    "Paths can be resolved relative to another directory"

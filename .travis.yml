@@ -32,16 +32,11 @@ before_install:
 - cat ~/travis-racket/install-racket.sh | bash # pipe to bash not sh!
 - export PATH="${RACKET_DIR}/bin:${PATH}" #install-racket.sh can't set for us
 
-install:
- - raco pkg install --auto ./unlike-assets-lib ./unlike-assets-doc ./unlike-assets-test
-
 before_script:
+ - raco pkg install --auto ./unlike-assets-lib ./unlike-assets-doc ./unlike-assets-test ./unlike-assets
 
-# Here supply steps such as raco make, raco test, etc.  You can run
-# `raco pkg install --deps search-auto` to install any required
-# packages without it getting stuck on a confirmation prompt.
 script:
- - raco test -p unlike-assets-test
+- raco test -p unlike-assets-test
 
 after_success:
  - raco setup --check-pkg-deps --pkgs unlike-assets

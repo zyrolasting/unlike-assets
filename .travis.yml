@@ -41,7 +41,7 @@ before_script:
 # `raco pkg install --deps search-auto` to install any required
 # packages without it getting stuck on a confirmation prompt.
 script:
- - raco test -x -p unlike-assets-test
+ - raco test -p unlike-assets-test
 
 after_success:
  - raco setup --check-pkg-deps --pkgs unlike-assets

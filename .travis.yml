@@ -33,7 +33,7 @@ before_install:
 - export PATH="${RACKET_DIR}/bin:${PATH}" #install-racket.sh can't set for us
 
 install:
- - raco pkg install --auto --name ./unlike-assets-lib ./unlike-assets-doc ./unlike-assets-test
+ - raco pkg install --auto ./unlike-assets-lib ./unlike-assets-doc ./unlike-assets-test
 
 before_script:
 

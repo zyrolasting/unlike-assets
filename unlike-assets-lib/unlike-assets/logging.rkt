@@ -2,13 +2,12 @@
 
 ;; Provides logging unique to this library for use internally and by the user.
 
-(require
-  racket/dict
-  racket/function
-  racket/logging
-  racket/match
-  racket/string
-  ansi-color)
+(require racket/dict
+         racket/function
+         racket/logging
+         racket/match
+         racket/string
+         ansi-color)
 
 (provide (all-defined-out))
 

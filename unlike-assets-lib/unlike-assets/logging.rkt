@@ -17,7 +17,7 @@
 (define show-prefix?      (make-parameter #f))              ; Show topic prefix in log
 (define show-all-events?  (make-parameter #f))              ; Show all topics and levels
 (define show-level?       (make-parameter #f))              ; Show level prefix in log
-(define error-port-levels (make-parameter '(fatal error)))  ; Levels that are directed to (current-error-port) 
+(define error-port-levels (make-parameter '(fatal error)))  ; Levels that are directed to (current-error-port)
 (define prescribed-prefix (make-parameter ""))              ; An enforced prefix used to track activity deep inside threads or other hard-to-track control structures.
 (define format-clear      (make-parameter identity))        ; Procedure to format values returned from (current-clarify-unlike-proc)
 (define format-unclear    (make-parameter identity))        ; Procedure to format values given to (current-clarify-unlike-proc)
@@ -119,7 +119,7 @@
 (define (with-report proc)
   (define counts (make-counts-dict))
   (define proc-out
-    (with-intercepted-logging 
+    (with-intercepted-logging
       (match-lambda [(vector level message _ topic)
                      (when (may-display-level? level topic)
                        (set! counts (count-level counts level))

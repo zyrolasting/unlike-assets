@@ -23,8 +23,7 @@
 (define format-unclear    (make-parameter identity))        ; Procedure to format values given to (current-clarify-unlike-proc)
 
 ;; Isolate the logger to enable explicit control over events.
-(define PREFIX "unlike-assets")
-(define TOPIC (string->symbol PREFIX))
+(define TOPIC 'unlike-assets)
 (define unlike-assets-logger (make-logger TOPIC #f))
 
 (define (make-child-logger)
@@ -41,7 +40,7 @@
                TOPIC
                message
                data
-               PREFIX))
+               (show-prefix?)))
 
 ;; Reinvent (define-logger) bindings here.
 ;; I didn't like how much happened out of my view.
@@ -111,18 +110,9 @@
 
 (define (format-message level message)
   (define level? (show-level?))
-  (define prefix? (show-prefix?))
-  (define (maybe-without-prefix str)
-    (if (show-prefix?)
-        str
-        (string-replace str
-                        (format "~a: " PREFIX)
-                        "")))
-
-  (maybe-without-prefix
-    (if level?
+  (if level?
       (format "~a: ~a~n" level message)
-      (format "~a~n" message))))
+      (format "~a~n" message)))
 
 ;; Sugary receiver that counts events by level
 ;; and displays the messages to stdout or stderr.

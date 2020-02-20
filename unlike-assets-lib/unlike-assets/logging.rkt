@@ -99,13 +99,9 @@
                 1)))
 
 (define (may-display-level? level topic)
-  (if (equal? topic TOPIC)
-    (if (equal? level 'debug)
-        (or (show-all-events?) (show-debug?))
-        #t)
-    (or (show-all-events?)
-        (member level ; Racket's info channel is noisy, but don't hide urgent messages.
-                '(warning error fatal)))))
+  (if (equal? level 'debug)
+      (or (show-all-events?) (show-debug?))
+      #t))
 
 (define (format-message level message)
   (define level? (show-level?))
@@ -127,7 +123,8 @@
                                                           message)))])
       proc
       #:logger unlike-assets-logger
-      'debug))
+      'debug
+      TOPIC))
   (values proc-out counts))
 
 (define (with-report/void proc)

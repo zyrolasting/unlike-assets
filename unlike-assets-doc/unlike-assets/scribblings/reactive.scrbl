@@ -11,7 +11,7 @@
 
 @defmodule[unlike-assets/reactive]
 
-The reactive model uses my @racket[kinda-ferpy] library to track
+The reactive model uses my @racketmodname[kinda-ferpy] library to track
 dependencies between assets and build them both lazily and
 asynchronously. This model is best for those who prefer
 functional programming and don't want to deal with the

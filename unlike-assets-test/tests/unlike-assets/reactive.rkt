@@ -29,3 +29,13 @@
   (sys "a")
   (check-true (hash-has-key? (sys) "a")
               (live-build? (hash-ref (sys) "a"))))
+
+(test-case "Can create aliases for keys based on build products"
+  (define sys (make-u/a-build-system
+               (λ (key _) (start-live-build! key
+                                             #:sample! (λ _ #f)
+                                             #:build! (λ _ (string-upcase key))
+                                             #:suppress? equal?))))
+  (check-equal? (sys "marked" string? (λ (key v) (string-ref v 0)))
+                "MARKED")
+  (check-eq? (sys #\M) (sys "marked")))

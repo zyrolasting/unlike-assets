@@ -10,12 +10,16 @@
 @title{Reactive Model}
 
 @defmodule[unlike-assets/reactive]
-Unlike the imperative model, the reactive model uses no classes. It
-also uses @racketmodname[kinda-ferpy] to represent assets as living
-values.
 
-@bold{This module is experimental. Use the imperative model
-if you need a stable interface.}
+The reactive model uses my @racket[kinda-ferpy] library to track
+dependencies between assets and build them both lazily and
+asynchronously. This model is best for those who prefer
+functional programming and don't want to deal with the
+underlying graph.
+
+@bold{This module is experimental. Use the imperative model if you
+need a stable interface.} Once this stabilizes, I suggest you prefer
+it over the imperative model.
 
 @section{Reactive API Reference}
 @defproc[(u/a-build-system? [p any/c]) boolean?]{
@@ -68,27 +72,43 @@ true value is the value returned. This implies that @racket[(LB)] is equivalent
 to @racket[(LB stateful-cell?)].
 }
 
-@defproc[(make-u/a-build-system [key->live-build (-> any/c u/a-build-system? live-build?)]) u/a-build-system?]{
-Returns a procedure @racket[S] that encapsulates a mutable hash of live builds.
+@defproc[(make-u/a-build-system [key->live-build (-> any/c u/a-build-system? live-build?)]
+                                [known (and/c hash? (not/c immutable?)) (make-hash)])
+                                u/a-build-system?]{
+Returns a procedure @racket[S] that encapsulates @racket[known],
+a mutable hash of live builds encountered through use of @racket[S].
 
-@racket[(S key)] will return a live build with the given key.
-If the build does not already exist in the hash, then it will first be
-added using @racket[(key->live-build key S)]. Subsequent applications of
-@racket[S] to @racket[key] will return the same reference to the live
-build without consulting @racket[key->live-build].
+@racket[(S)] evaluates to @racket[known].
+
+@racket[(S key)] will return a live build with the given key.  If the
+build does not already exist in @racket[known], then it will first be
+added using @racket[(key->live-build key S)]. Subsequent applications
+of @racket[S] to @racket[key] will return the same reference to the
+live build without consulting @racket[key->live-build]. Notice that
+@racket[S] can be invoked recursively in the body of
+@racket[key->live-build]. This allows one live build to depend on
+others. Be warned that if a cycle forms, then the build will not
+terminate.
 
 @racket[(S key stop?)] behaves like @racket[(S key)], but will also
 apply the live build procedure @racket[LB] to @racket[stop?] (See
 @racket[start-live-build!]).
 
-@racket[(S)] will return the hash of live builds encountered over its
-lifetime.
-
-Notice that @racket[S] can be invoked recursively in the body of
-@racket[key->live-build]. This allows one live build to depend on
-other live builds. Be warned that if a cycle forms (e.g. the build for
-key @racket["a"] in turn applies @racket[S] to @racket["a"]), then the
-build will not terminate.
+@margin-note{@racket[(S key stop? make-alias)] is useful for clients
+that want to refer to a live build by the name of its product.  If an
+asset @racket["main.css.rkt"] produces @racket["f871a234.css"], then
+@racket[(S "f871a234.css")] will return the same live build that
+produced it. Note that this does NOT return the same version of the
+asset the name implies! It returns the living build and therefore only
+the latest version, even if the name is outdated.}  @racket[(S key
+stop? make-alias)] behaves like @racket[(S key stop?)], with the added
+behavior of creating an alias for @racket[key] based on the produced
+value. @racket[make-alias] is a procedure that accepts two formals and
+returns an alias for @racket[key]. The arguments are always
+@racket[key] and @racket[(S key stop?)], in that order. If
+@racket[make-alias] produces a key that already exists, that value for
+that key will be overwritten. Once evaluated, @racket[(eq? (S key) (S
+(make-alias key (S key stop?))))] is true.
 }
 
 @section{Example: Living Values based on Files}

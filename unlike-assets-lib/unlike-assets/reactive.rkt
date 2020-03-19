@@ -51,19 +51,19 @@
      (apply-until %producer stop?))))
 
 
-(define (make-u/a-build-system key->live-build)
-  (define known (make-hash))
-
+(define (make-u/a-build-system key->live-build [known (make-hash)])
   (define u/a
     (make-u/a-build-system-proc
      (case-lambda
        [() known]
        [(key) (live-build-ref key)]
-       [(key stop?) ((live-build-ref key) stop?)])))
-
+       [(key stop?) ((u/a key) stop?)]
+       [(key stop? make-alias)
+        (define val (u/a key stop?))
+        (hash-set! known (make-alias key val) (u/a key))
+        val])))
   (define (live-build-ref key)
     (unless (hash-has-key? known key)
       (hash-set! known key (key->live-build key u/a)))
     (hash-ref known key))
-
   u/a)

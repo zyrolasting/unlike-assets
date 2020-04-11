@@ -7,7 +7,8 @@
   racket/dict
   racket/function
   net/url
-  "logging.rkt")
+  "logging.rkt"
+  "reactive.rkt")
 (provide (all-defined-out))
 
 (define (clarify/multi compiler entries)
@@ -54,3 +55,30 @@
 
 (define (block r/c d/c d/h) (first d/h))
 (define (rebuild r/c d/c d/h) (last d/h))
+
+(define (make-key->live-build/sequence . maybe-makers)
+  (λ (key recurse)
+    (ormap (λ (p) (p key recurse))
+           maybe-makers)))
+
+(define (make-key->live-build/unlike-compiler instance available? changed?)
+  (λ (key recurse)
+    (define clear (send instance clarify key))
+    (and clear
+         (start-live-build! key
+          #:sample! (λ ()
+                      (define known (send instance has? clear))
+                      (define available (available? clear))
+                      (list (and available (not known))
+                            (and (not available) known)
+                            (and available known (changed? clear))))
+          #:suppress? (λ (a b) (ormap values b))
+          #:build! (λ (spec)
+                     (define a (car spec))
+                     (define r (cadr spec))
+                     (define c (caddr spec))
+                     (when a
+                       (send instance add! clear))
+                     (send instance compile!
+                           #:changed (if c (list clear) null)
+                           #:removed (if r (list clear) null)))))))

@@ -1,11 +1,15 @@
 #lang scribble/manual
-@(require (for-label racket racket/class unlike-assets unlike-assets/policy))
+@(require (for-label racket
+                     racket/class
+                     unlike-assets
+                     unlike-assets/policy
+                     unlike-assets/reactive))
 
 @title{Policy authoring utilities}
 
 @defmodule[unlike-assets/policy]
 
-This module provides practical tools when working with @racket[unlike-compiler%].
+This module provides helper procedures for the available models.
 
 @section{Clarification}
 
@@ -63,3 +67,31 @@ A ripple procedure that unconditionally prevents change from propogating.}
 @defthing[rebuild ripple/c]{
 A ripple procedure that unconditionally forces an asset to rebuild.}
 
+@section{Reactive Model Helpers}
+
+@defproc[(make-key->live-build/sequence [maybe-makers (-> string? procedure? (or/c #f live-build?))] ...) procedure?]{
+Returns a procedure equivalent to the following:
+
+@racketblock[
+(λ (key recurse)
+   (ormap (λ (p) (p key recurse))
+          maybe-makers))]
+
+Use this to sequence several procedures that map keys to live builds.
+}
+
+@defproc[(make-key->live-build/unlike-compiler [instance (instanceof/c (subclass?/c unlike-compiler%))]
+                                               [available? (-> clear/c boolean?)]
+                                               [changed? (-> clear/c boolean?)])
+                                               procedure?]{
+Returns a procedure @tt{P} suitable for use in @racket[make-u/a-build-system],
+where @racket[P] acts as an adapter between the reactive model and the imperative
+model. @racket[(P key recurse)] assumes that @racket[key] is an unclear name. Once
+clarified using @racket[(send instance clarify key)], the clear name is
+checked against @racket[available?] and @racket[changed?]. From there,
+@racket[P] will call @method[unlike-compiler% compile!] on the provided
+instance as a side-effect with appropriate arguments.
+
+The live build produced by any application of @racket[P] will always
+produce the latest result of @method[unlike-compiler% compile!].
+}

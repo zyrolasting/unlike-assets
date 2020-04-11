@@ -5,6 +5,7 @@
                     racket/function
                     kinda-ferpy
                     unlike-assets/reactive
+                    unlike-assets/policy
                     unlike-assets]]
 
 @title{Reactive Model}
@@ -109,6 +110,47 @@ returns an alias for @racket[key]. The arguments are always
 @racket[make-alias] produces a key that already exists, that value for
 that key will be overwritten. Once evaluated, @racket[(eq? (S key) (S
 (make-alias key (S key stop?))))] is true.
+}
+
+
+
+
+@defproc[(make-u/a-procure-procedure [user-procs (non-empty-listof (-> string? procedure? (or/c #f live-build?)))]
+                                     [asset? (-> any/c any/c)]
+                                     [known hash? (make-hash)])
+                                     (->* (string?) #:rest symbol?)]{
+Returns a @deftech{procure} procedure @racketfont{P} that encapsulates
+a system @racketfont{S} from @racket[(make-u/a-build-system (apply
+make-key->live-build/sequence user-procs) known)].
+
+@racketfont{P} behaves like a dynamic module resolver. It assumes that
+@racket[(S key asset?)] is a @racket[(-> symbol? any)] procedure.
+
+@itemlist[
+@item{@racket[(P key)] is equivalent to @racketfont{(S key
+stateful-cell?)}. This is a @deftech{weak procurement} because it does
+not wait for the result of a build, but it does start the build in the
+background.}
+
+@item{@racket[(P key sym)] is equivalent to @racketfont{((S key
+asset?) sym)}. This is a @deftech{strong procurement} because it
+starts a build, waits for the result @racket[V], and returns
+@racket[(V sym)].}
+
+@item{@racket[(P key sym . syms)] is equivalent to @racket[(apply
+values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
+]
+
+@racketblock[
+(code:comment "Strong procurement")
+(define html-formatted-markdown (P "index.md" 'html))
+
+(code:comment "Weak procurement")
+(define build-cell (P "index.md"))
+
+(code:comment "Srong procurement with multiple values.")
+(define-values (html-formatted-markdown output-file) (P "index.md" 'html 'out-file))
+]
 }
 
 @section{Example: Living Values based on Files}

@@ -67,16 +67,3 @@
       (hash-set! known key (key->live-build key u/a)))
     (hash-ref known key))
   u/a)
-
-(define (make-u/a-procure-procedure user-procs asset? [known (make-hash)])
-  (let ([u/a (make-u/a-build-system
-              (λ (key recurse)
-                (ormap (λ (p) (p key recurse))
-                       user-procs)))])
-    (λ (key . syms)
-      (if (null? syms)
-          (u/a key stateful-cell?)
-          (let ([la (u/a key asset?)])
-            (if (= (length syms) 1)
-                (la (car syms))
-                (apply values (map la syms))))))))

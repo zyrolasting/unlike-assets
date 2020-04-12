@@ -7,7 +7,8 @@
 (provide start-live-build!
          make-u/a-build-system
          live-build?
-         u/a-build-system?)
+         u/a-build-system?
+         make-key->live-build/sequence)
 
 (define (of-name str)
   (let ([s (string->uninterned-symbol str)])

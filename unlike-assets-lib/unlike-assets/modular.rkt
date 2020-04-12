@@ -5,8 +5,7 @@
          asset?
          asset
          make-asset
-         make-asset-contract
-         raise-key-error)
+         make-asset-contract)
 
 (require racket/string
          kinda-ferpy
@@ -14,9 +13,6 @@
          "policy.rkt"
          (for-syntax racket/base
                      syntax/parse))
-
-(define (raise-key-error key)
-  (error 'asset-ref "no such key: ~v" key))
 
 (define (make-asset-contract #:allow-missing-keys? weak? pairings)
   (λ (maybe-matching)
@@ -39,7 +35,7 @@
 (define (make-asset h)
   (procedure-rename
    (case-lambda [()    (hash-keys h)]
-                [(k)   (hash-ref h k (λ () (raise-key-error k)))]
+                [(k)   (hash-ref h k)]
                 [(k t) (hash-ref h k t)])
    'asset-ref))
 

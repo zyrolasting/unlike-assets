@@ -11,9 +11,7 @@
           [procure/weak (-> string? stateful-cell?)]
           [procure/strong (->* (string?) #:rest (listof symbol?) any/c)]))
 
-(require "private/reactive/system.rkt"
-         "private/reactive/assets.rkt"
-         kinda-ferpy)
+(require kinda-ferpy)
 
 (define current-key->live-build
   (make-parameter (λ _ (error "current-key->live-build is not defined"))))

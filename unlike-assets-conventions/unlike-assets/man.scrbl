@@ -91,3 +91,41 @@ I started building @Pw&{styles.css}, just by mentioning it here.
 The production-facing path is @Ps&{styles.css}.
 ]
 }
+
+@defproc[(make-key->live-build/sequence [maybe-makers (-> string?
+                                                          procedure?
+                                                          (or/c #f live-build?))] ...)
+                                        procedure?]{
+Returns a procedure equivalent to the following:
+
+@racketblock[
+(λ (key recurse)
+   (ormap (λ (p) (p key recurse))
+          maybe-makers))]
+
+Use this to sequence several procedures that map keys to live builds.
+}
+
+@section{Shared Resolver}
+
+@deftogether[(
+@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]
+@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]
+@defproc[(procure/weak [key string?]) stateful-cell?)]
+@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c)]
+@defthing[Pw procure/weak]
+@defthing[Ps procure/strong]
+)]{
+This is an interface for a shared build system for the current process.
+
+@racket[current-u/a-build-system] uses @racket[current-key->live-build]
+to resolve builds. By default, @racket[current-key->live-build] raises an
+error that instructs you to provide your own handler.
+
+@itemlist[
+@item{@racket[(procure/weak key)], or @racket[(Pw key)] is
+equivalent to @racket[((current-u/a-build-system) key stateful-cell?)].}
+@item{@racket[(procure/strong key . syms)], or @racket[(Ps key . syms)] is
+equivalent to @racket[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)].}
+]
+}

@@ -9,7 +9,6 @@
 @title{Unlike Assets: Build Video Games, Websites, and More}
 @author{Sage Gerard}
 
-@defmodule[unlike-assets]
 Unlike Assets (UA) builds websites, video games, music compositions,
 and other complicated creative projects. It's like
 @hyperlink["https://webpack.js.org/"]{Webpack}, but better.
@@ -31,17 +30,14 @@ a texture from that location.}]
 Altogether, UA cuts out the busywork in imaginative programming.
 
 @section{Model}
-The underlying model uses my @racketmodname[kinda-ferpy] library to track
+@defmodule[unlike-assets/model]
+
+The underlying model uses @racketmodname[kinda-ferpy] to track
 dependencies between assets and build them both lazily and
-asynchronously. This model is best for those who prefer
-functional programming and don't want to deal with the
-underlying graph.
+asynchronously. This means it's not I/O bound, it will only do as much
+work as necessary, it won't do redundant work, and it will notice
+changes.
 
-@bold{This module is experimental. Use the imperative model if you
-need a stable interface.} Once this stabilizes, I suggest you prefer
-it over the imperative model.
-
-@section{Reference}
 @defproc[(u/a-build-system? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] is an unlike asset build system created by @racket[make-u/a-build-system].
 }
@@ -131,101 +127,7 @@ that key will be overwritten. Once evaluated, @racket[(eq? (S key) (S
 (make-alias key (S key stop?))))] is true.
 }
 
-@section{Reactive Assets as Modules}
-
-Under the reactive model, assets are living hashes that act as
-restricted "modules". When combined with
-@racket[make-u/a-build-system], you can make @deftech{procure}
-procedures.  Procure procedures load non-Racket resources as if they
-were dynamic Racket modules with reload support enabled.
-
-@defproc[(make-asset [h (and/c immutable? hash?)]) procedure?]{
-Returns a procedure @racket[P] such that:
-
-@itemlist[@item{@racket[(P)] returns @racket[(hash-keys h)].}
-          @item{@racket[(P k)] returns @racket[(hash-ref h k)].}
-          @item{@racket[(P k t)] returns @racket[(hash-ref h k t)].}]
-}
-
-@defproc[(asset? [v any/c]) boolean?]{
-Returns @racket[#t] if @racket[v] is a value produced by @racket[make-asset].
-}
-
-@defform[(asset pair ...)
-         #:grammar ([pair [id expr]])]{
-A macro that expands to a @racket[make-asset] call.
-
-@racketblock[
-(asset [media-type #"text/html"]
-       [version '(1 3)])]
-}
-
-@defproc[(make-asset-contract [#:allow-missing-keys? allow-missing-keys? any/c] [pair (cons/c symbol? flat-contract?)]) flat-contract?]{
-Returns a contract that ensures a given asset's values match their own contracts.
-
-If @racket[allow-missing-keys?] is a true value, then the contract
-will not break if a key is not defined in the underlying asset's hash.
-}
-
-@defform[(asset/c pair ... maybe-optional-pairs)
-         #:grammar [
-         (pair [id contract-expr])
-         (maybe-optional-pairs (code:line)
-                               #:optional pair ...)]]{
-The macro form of @racket[make-asset-contract]. The following
-two expressions are equivalent:
-
-@racketblock[
-(or/c (make-asset-contract #:weak? #f (list (cons 'media-type bytes?)
-                                            (cons 'writer (-> output-port? any))))
-      (make-asset-contract #:weak? #t (list (cons 'alias string?))))]
-
-@racketblock[
-(asset/c [media-type bytes?]
-         [writer (-> output-port? any)]
-         #:optional
-         [alias string?])]
-}
-
-@defproc[(make-u/a-procure-procedure [S u/a-build-system?])
-                                     (->* (string?) #:rest (listof symbol?) any/c)]{
-Returns a @tech{procure} procedure @racketfont{P} that behaves like
-a dynamic module resolver for results matching @racket[(S key asset?)].
-
-@itemlist[
-@item{@racket[(P key)] is equivalent to @racket[(S key asset?)].}
-@item{@racket[(P key sym)] is equivalent to @racket[((S key asset?) sym)].}
-@item{@racket[(P key sym . syms)] is equivalent to @racket[(apply
-values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
-]
-}
-
-@section{Shared System}
-
-@deftogether[(
-@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]
-@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]
-@defproc[(procure/weak [key string?]) stateful-cell?)]
-@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c)]
-@defthing[Pw procure/weak]
-@defthing[Ps procure/strong]
-)]{
-This is an interface for a shared build system for the current process.
-
-@racket[current-u/a-build-system] uses @racket[current-key->live-build]
-to resolve builds. By default, @racket[current-key->live-build] raises an
-error that instructs you to provide your own handler.
-
-@itemlist[
-@item{@racket[(procure/weak key)], or @racket[(Pw key)] is
-equivalent to @racket[((current-u/a-build-system) key stateful-cell?)].}
-@item{@racket[(procure/strong key . syms)], or @racket[(Ps key . syms)] is
-equivalent to @racket[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)].}
-]
-}
-
-
-@section{Example: Living Values based on Files}
+@subsection{Example: Living Values based on Files}
 
 @racketblock[
 (require racket/runtime-path)
@@ -258,3 +160,77 @@ equivalent to @racket[(apply (make-u/a-procure-procedure (current-u/a-build-syst
 (code:comment "This will return the current number of lines in passage.txt.")
 (sys "passage.txt" number?)
 ]
+
+@section{Reactive Assets as Modules}
+@defmodule[unlike-assets/assets]
+
+Assets are just hashes with lipstick. They combine with
+@racket[make-u/a-build-system] to create permissive module resolvers.
+To avoid insanity, asset definitions come with tailored contracts and
+contructors.
+
+@defproc[(make-asset [h (and/c immutable? hash?)]) procedure?]{
+Returns a procedure @racket[P] such that:
+
+@itemlist[@item{@racket[(P)] returns @racket[h].}
+          @item{@racket[(P k)] returns @racket[(hash-ref h k)].}
+          @item{@racket[(P k t)] returns @racket[(hash-ref h k t)].}]
+}
+
+@defproc[(asset? [v any/c]) boolean?]{
+Returns @racket[#t] if @racket[v] is a value produced by @racket[make-asset].
+}
+
+@defform[(asset pair ...)
+         #:grammar ([pair [id expr]])]{
+A macro that expands to a @racket[make-asset] call.
+
+@racketblock[
+(asset [media-type #"text/html"]
+       [version '(1 3)])]
+}
+
+@defproc[(make-asset-contract [#:allow-missing-keys? allow-missing-keys? any/c]
+                              [pairings (non-empty-listof (cons/c symbol? flat-contract?))])
+                              flat-contract?]{
+Returns a contract that checks an asset's values.
+
+If @racket[allow-missing-keys?] is a true value, then the contract
+will not pass blame if a key is missing in the underlying hash.
+}
+
+@defform[(asset/c pair ... maybe-optional-pairs)
+         #:grammar [
+         (pair [id contract-expr])
+         (maybe-optional-pairs (code:line)
+                               #:optional pair ...)]]{
+The macro form of @racket[make-asset-contract].
+
+This...
+@racketblock[
+(asset/c [media-type bytes?]
+         [writer (-> output-port? any)]
+         #:optional
+         [alias string?])]
+}
+
+...means that:
+
+@racketblock[
+(or/c (make-asset-contract #:weak? #f (list (cons 'media-type bytes?)
+                                            (cons 'writer (-> output-port? any))))
+      (make-asset-contract #:weak? #t (list (cons 'alias string?))))]
+
+
+@defproc[(make-u/a-procure-procedure [S u/a-build-system?])
+                                     (->* (string?) #:rest (listof symbol?) any/c)]{
+Returns a @tech{procure} procedure @racketfont{P} that behaves like
+a dynamic module resolver for results matching @racket[(S key asset?)].
+
+@itemlist[
+@item{@racket[(P key)] is equivalent to @racket[(S key asset?)].}
+@item{@racket[(P key sym)] is equivalent to @racket[((S key asset?) sym)].}
+@item{@racket[(P key sym . syms)] is equivalent to @racket[(apply
+values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
+]
+}

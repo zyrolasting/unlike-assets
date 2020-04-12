@@ -9,8 +9,7 @@
 
 (require racket/string
          kinda-ferpy
-         "reactive.rkt"
-         "policy.rkt"
+         "system.rkt"
          (for-syntax racket/base
                      syntax/parse))
 

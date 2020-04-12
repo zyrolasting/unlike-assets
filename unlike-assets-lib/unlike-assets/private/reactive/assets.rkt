@@ -5,7 +5,8 @@
          asset?
          asset
          make-asset
-         make-asset-contract)
+         make-asset-contract
+         make-u/a-procure-procedure)
 
 (require racket/string
          kinda-ferpy
@@ -45,9 +46,9 @@
 
 (define (make-u/a-procure-procedure u/a)
   (λ (key . syms)
-    (if (null? syms)
-        (u/a key stateful-cell?)
-        (let ([la (u/a key asset?)])
+    (let ([la (u/a key asset?)])
+      (if (null? syms)
+          la
           (if (= (length syms) 1)
               (la (car syms))
               (apply values (map la syms)))))))

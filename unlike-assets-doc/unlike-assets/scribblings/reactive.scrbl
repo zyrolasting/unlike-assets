@@ -169,36 +169,42 @@ two expressions are equivalent:
 }
 
 @defproc[(make-u/a-procure-procedure [S u/a-build-system?])
-                                     (->* (string?) #:rest symbol?)]{
+                                     (->* (string?) #:rest (listof symbol?) any/c)]{
 Returns a @tech{procure} procedure @racketfont{P} that behaves like
 a dynamic module resolver for results matching @racket[(S key asset?)].
 
 @itemlist[
-@item{@racket[(P key)] is equivalent to @racket[(S key
-stateful-cell?)]. This is a @deftech{weak procurement} because it does
-not wait for the result of a build, but it does start the build in the
-background.}
-
-@item{@racket[(P key sym)] is equivalent to @racket[((S key
-asset?) sym)]. This is a @deftech{strong procurement} because it
-starts a build, waits for the result @racket[V], and returns
-@racket[(V sym)].}
-
+@item{@racket[(P key)] is equivalent to @racket[(S key asset?)].}
+@item{@racket[(P key sym)] is equivalent to @racket[((S key asset?) sym)].}
 @item{@racket[(P key sym . syms)] is equivalent to @racket[(apply
 values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
 ]
+}
 
-@racketblock[
-(code:comment "Strong procurement")
-(define html-formatted-markdown (P "index.md" 'html))
+@section{Shared System}
 
-(code:comment "Weak procurement")
-(define build-cell (P "index.md"))
+@deftogether[(
+@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]
+@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]
+@defproc[(procure/weak [key string?]) stateful-cell?)]
+@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c)]
+@defthing[Pw procure/weak]
+@defthing[Ps procure/strong]
+)]{
+This is an interface for a shared build system for the current process.
 
-(code:comment "Srong procurement with multiple values.")
-(define-values (html-formatted-markdown output-file) (P "index.md" 'html 'out-file))
+@racket[current-u/a-build-system] uses @racket[current-key->live-build]
+to resolve builds. By default, @racket[current-key->live-build] raises an
+error that instructs you to provide your own handler.
+
+@itemlist[
+@item{@racket[(procure/weak key)], or @racket[(Pw key)] is
+equivalent to @racket[((current-u/a-build-system) key stateful-cell?)].}
+@item{@racket[(procure/strong key . syms)], or @racket[(Ps key . syms)] is
+equivalent to @racket[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)].}
 ]
 }
+
 
 @section{Example: Living Values based on Files}
 

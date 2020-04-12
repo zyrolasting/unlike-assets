@@ -1,8 +1,7 @@
 #lang racket/base
 
 (require racket/contract)
-(provide (all-from-out "private/reactive/system.rkt"
-                       "private/reactive/assets.rkt")
+(provide (all-from-out unlike-assets/reactive)
          (rename-out [procure/weak Pw]
                      [procure/strong Ps])
          (contract-out
@@ -11,8 +10,7 @@
           [procure/weak (-> string? stateful-cell?)]
           [procure/strong (->* (string?) #:rest (listof symbol?) any/c)]))
 
-(require "private/reactive/system.rkt"
-         "private/reactive/assets.rkt"
+(require unlike-assets/reactive
          kinda-ferpy)
 
 (define current-key->live-build

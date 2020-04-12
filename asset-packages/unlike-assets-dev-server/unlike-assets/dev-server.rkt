@@ -1,0 +1,47 @@
+#lang racket/base
+
+(require racket/contract
+         web-server/http/request-structs
+         web-server/http/response-structs
+         unlike-assets/reactive
+         web-server/dispatchers/dispatch)
+
+(define procure-responder/c
+  (-> string? (asset/c [->http-response (-> request? response?)])))
+
+(provide
+ (contract-out
+  [make-dispatcher (-> procure-responder/c dispatcher/c)]
+  [start-server (->* (procure-responder/c) (exact-positive-integer?) procedure?)]))
+
+(require net/url
+         racket/format
+         racket/function
+         racket/string
+         web-server/web-server
+         unlike-assets/logging
+         (prefix-in lifter:
+                    web-server/dispatchers/dispatch-lift))
+
+(define (capture-error-display e)
+  (parameterize ([current-error-port (open-output-string)])
+    ((error-display-handler) (exn-message e) e)
+    (get-output-string (current-error-port))))
+
+(define (show-error e)
+  (response/output #:code 500
+                   #:mime-type #"text/plain; charset=utf-8"
+                   (λ (o) (write-bytes (string->bytes/utf-8 (capture-error-display e)) o))))
+
+(define (url->asset-key u)
+  (string-join (map path/param-path (url-path u)) "/"))
+
+(define (make-dispatcher sys)
+  (lifter:make
+   (λ (req)
+     (with-handlers ([exn:fail? show-error])
+       ((sys (url->asset-key (request-uri req))) '->http-response) req))))
+
+(define (start-server sys [port 8080])
+  (serve #:dispatch (make-dispatcher sys)
+         #:port port))

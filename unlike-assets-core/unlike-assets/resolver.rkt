@@ -1,8 +1,8 @@
 #lang racket/base
 
 (require racket/contract)
-(provide (all-from-out "private/reactive/system.rkt"
-                       "private/reactive/assets.rkt")
+(provide (all-from-out "private/system.rkt"
+                       "private/assets.rkt")
          (rename-out [procure/weak Pw]
                      [procure/strong Ps])
          (contract-out

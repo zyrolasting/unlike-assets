@@ -4,15 +4,34 @@
                     racket/contract
                     racket/function
                     kinda-ferpy
-                    unlike-assets/reactive
-                    unlike-assets/policy
                     unlike-assets]]
 
-@title{Reactive Model}
+@title{Unlike Assets: Build Video Games, Websites, and More}
+@author{Sage Gerard}
 
-@defmodule[unlike-assets/reactive]
+@defmodule[unlike-assets]
+Unlike Assets (UA) builds websites, video games, music compositions,
+and other complicated creative projects. It's like
+@hyperlink["https://webpack.js.org/"]{Webpack}, but better.
 
-The reactive model uses my @racketmodname[kinda-ferpy] library to track
+UA works by naming arbitrary Racket values and tracking them in a
+dependency graph. This means two things:
+
+@itemlist[
+@item{@bold{You don't have to manually keep resources in sync while
+you work.} If you edit a stylesheet, all dependendent web pages will
+automatically reference the production-ready version of that
+stylesheet.}
+
+@item{@bold{You can compose data in interesting ways.}
+You can make an image depend on music to produce a live visualization.
+You can make a 3D model depend on a URL such that changing the URL loads
+a texture from that location.}]
+
+Altogether, UA cuts out the busywork in imaginative programming.
+
+@section{Model}
+The underlying model uses my @racketmodname[kinda-ferpy] library to track
 dependencies between assets and build them both lazily and
 asynchronously. This model is best for those who prefer
 functional programming and don't want to deal with the
@@ -22,7 +41,7 @@ underlying graph.
 need a stable interface.} Once this stabilizes, I suggest you prefer
 it over the imperative model.
 
-@section{Reactive API Reference}
+@section{Reference}
 @defproc[(u/a-build-system? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] is an unlike asset build system created by @racket[make-u/a-build-system].
 }

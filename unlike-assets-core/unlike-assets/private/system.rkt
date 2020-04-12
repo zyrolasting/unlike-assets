@@ -21,7 +21,7 @@
 (define (<log level event target)
   (log-message (current-logger)
                level
-               'unlike-assets
+               'unlike-assets2
                (format "~a: ~a" event target)
                target))
 
@@ -67,3 +67,9 @@
       (hash-set! known key (key->live-build key u/a)))
     (hash-ref known key))
   u/a)
+
+
+(define (make-key->live-build/sequence . maybe-makers)
+  (λ (key recurse)
+    (ormap (λ (p) (p key recurse))
+           maybe-makers)))

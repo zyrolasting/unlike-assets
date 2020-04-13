@@ -1,2 +1,2 @@
 #lang info
-(define scribblings '(("man.scrbl" ())))
+(define scribblings '(("unlike-assets-conventions.scrbl" ())))

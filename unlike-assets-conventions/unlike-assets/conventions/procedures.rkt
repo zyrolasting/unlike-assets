@@ -1,16 +1,18 @@
 #lang racket/base
 
-(require "./contracts.rkt"
-         unlike-assets/reactive
+(require unlike-assets/core
          racket/contract
-         project-paths)
+         project-paths
+         net/url
+         "contracts.rkt"
+         "resolver.rkt")
 
 (provide (contract-out
           [procure/strong/relative-path-string (-> complete-path?
                                                    string?
                                                    string?)]
           [procure/weak/keep-key (-> string? string?)])
-         define-abbreviated-path-lookups)
+         define-relative-dependency-lookups)
 
 (define (procure/strong/relative-path-string input-path key)
   (path->string (find-relative-path/by-file
@@ -24,7 +26,7 @@
   (Pw key)
   key)
 
-(define-syntax-rule (define-abbreviated-path-lookups input-path-expr)
+(define-syntax-rule (define-relative-dependency-lookups input-path-expr)
   (begin (define Ps& (curry procure/strong/relative-path-string input-path-expr))
          (define Pw& procure/weak/keep-key)))
 
@@ -42,9 +44,9 @@
                     (string=? host "127.0.0.1")
                     (string=? host "::1")))
               (not (url-port inst))
-              (empty? (url-query inst))
+              (null? (url-query inst))
               (not (url-fragment inst))
-              (not (empty? (url-path inst)))))))
+              (not (null? (url-path inst)))))))
 
 (define (file-url? url-inst)
   (let ([scheme (url-scheme url-inst)])

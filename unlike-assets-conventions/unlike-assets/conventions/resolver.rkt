@@ -1,6 +1,8 @@
 #lang racket/base
 
 (require racket/contract
+         racket/sequence
+         racket/set
          kinda-ferpy
          unlike-assets/core)
 
@@ -8,6 +10,7 @@
                      [procure/strong Ps]
                      [procure/strong/with-contract Ps/c])
          (contract-out
+          [in-assets (->* () (u/a-build-system? #:keep? (or/c flat-contract? (-> asset? any/c))) sequence?)]
           [make-key->live-build/sequence
            (->* ()
                 #:rest (listof (-> string? u/a-build-system? (or/c #f live-build?)))
@@ -17,6 +20,12 @@
           [procure/weak (-> string? stateful-cell?)]
           [procure/strong (->* (string?) #:rest (listof symbol?) any/c)]
           [procure/strong/with-contract (-> string? contract? asset?)]))
+
+(define (in-assets [sys (current-u/a-build-system)] #:keep? [keep? (λ _ #t)])
+  (sequence-filter (if (flat-contract? keep?) (flat-contract-predicate keep?) keep?)
+                   (sequence-map (λ (living-build)
+                                   (living-build asset?))
+                                 (in-set (apply seteq (hash-values (sys)))))))
 
 (define current-key->live-build
   (make-parameter (λ _ (error "current-key->live-build is not defined"))))

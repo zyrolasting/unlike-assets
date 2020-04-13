@@ -6,8 +6,7 @@
          project-paths
          web-server/http/request-structs
          web-server/http/response-structs
-         unlike-assets/core
-         "resolver.rkt")
+         unlike-assets/core)
 
 (define asset/writable/c
   (asset/c [write-bytes (-> output-port? any)]))
@@ -32,8 +31,3 @@
   (and/c asset/file-to-file/c
          asset/writable/c
          asset/serveable/c))
-
-(define (Ps/c key asset-contract)
-  (with-contract Ps/c
-    #:result asset-contract
-    (Ps key)))

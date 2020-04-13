@@ -83,4 +83,4 @@ The repo is just a bucket for packages. Just toss one in package to
 integrate an `unlike-assets` build system with something. Please
 include tests, docs, and logging.
 
-Your contributions must be made under the terms of [LICENSE](./LICENSE).
+Your contributions must be made under the terms of [the posted license](./LICENSE.txt).

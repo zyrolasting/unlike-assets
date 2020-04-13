@@ -3,13 +3,13 @@
 [![Scribble](https://img.shields.io/badge/Docs-Scribble-blue.svg)](http://docs.racket-lang.org/unlike-assets/index.html)
 
 Imagine that `(dynamic-require "/path/to/script.js" 'minified)`
-worked. That's what `unlike-assets` does, plus reload support.
+worked. That's what `unlike-assets` does.
 
 `unlike-assets` is a bit like Webpack, except leaner and powered by
 Racket. It gives you the means to integrate Racket with other
 ecosystems, so that you can treat any data object like an SVG
-document, a CSS stylesheet, an SPIR-V shader, or a tarball as a
-restricted Racket module with reload support.
+document, a CSS stylesheet, an SPIR-V shader, or a tarball like a
+Racket module with reload support.
 
 What does this mean? Well, you can build a CSS stylesheet according to
 your preferences, and end up with a production-ready document like so:

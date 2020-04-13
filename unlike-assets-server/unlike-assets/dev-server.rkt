@@ -6,13 +6,16 @@
          web-server/dispatchers/dispatch
          unlike-assets/conventions)
 
+
 (define procure-responder/c
   (-> string? (asset/c [->http-response (-> request? response?)])))
 
 (provide
+ (rename-out [asset/serveable/c asset/servable/c])
  (contract-out
   [make-dispatcher (-> procure-responder/c dispatcher/c)]
-  [start-server (->* (procure-responder/c) (exact-positive-integer?) procedure?)]))
+  [start-server (->* (procure-responder/c) (exact-positive-integer?) procedure?)]
+  [asset/serveable/c contract?]))
 
 (require net/url
          racket/format
@@ -21,6 +24,9 @@
          web-server/web-server
          (prefix-in lifter:
                     web-server/dispatchers/dispatch-lift))
+
+(define asset/serveable/c
+  (asset/c (->http-response (-> request? response?))))
 
 (define (capture-error-display e)
   (parameterize ([current-error-port (open-output-string)])

@@ -3,29 +3,30 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/function
+                    racket/rerequire
                     kinda-ferpy
-                    unlike-assets/core/model
-                    unlike-assets/core/assets]]
+                    unlike-assets/resolver]]
 
-@title{Unlike Assets: Core Model}
+@title{Unlike Assets: Resolver}
 @author{Sage Gerard}
 
-@defmodule[unlike-assets/core]
+@defmodule[unlike-assets/resolver]
 
-This package provides the groundwork for the @tt{unlike-assets-*}
-package namespace, without imposing restrictions on use.
+This package provides a configurable module resolver for non-Racket
+assets.
 
-@racketmodname[unlike-assets/core] provides all bindings from
-@racketmodname[unlike-assets/core/model] and
-@racketmodname[unlike-assets/core/assets].
+@racketmodname[unlike-assets/resolver] provides all bindings from
+@racketmodname[unlike-assets/resolver/model],
+@racketmodname[unlike-assets/resolver/assets],
+and @racketmodname[unlike-assets/resolver/shared].
 
-@section{Defining Asset Builders}
-@defmodule[unlike-assets/core/model]
+@section{Building Dependent Racket Values}
+@defmodule[unlike-assets/resolver/model]
 
-@racketmodname[unlike-assets/core/model] uses
-@racketmodname[kinda-ferpy] to track Racket values with
-dependencies. It will keep dependent values up-to-date when any
-dependencies change, asynchronously.
+@racketmodname[unlike-assets/resolver/model] provides build systems
+that keep named, arbitrary Racket values up-to-date according to
+lifecycle rules. The build systems created by this module do not impose
+any restrictions on the values they produce.
 
 @defproc[(u/a-build-system? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] is an unlike asset build system created by @racket[make-u/a-build-system].
@@ -150,13 +151,12 @@ that key will be overwritten. Once evaluated, @racket[(eq? (S key) (S
 (sys "passage.txt" number?)
 ]
 
-@section{@tt{unlike-assets/core/assets}}
-@defmodule[unlike-assets/core/assets]
+@section{Assets Definitions}
+@defmodule[unlike-assets/resolver/assets]
 
 Assets are just hashes with lipstick. They combine with
-@racket[make-u/a-build-system] to create permissive module resolvers.
-To avoid insanity, asset definitions come with tailored contracts and
-contructors.
+@racket[make-u/a-build-system] and some provided contract combinators
+to create custom module resolvers.
 
 @defproc[(make-asset [h (and/c immutable? hash?)]) procedure?]{
 Returns a procedure @racket[P] such that:
@@ -222,4 +222,90 @@ resolver for results matching @racket[(S key asset?)].
 @item{@racket[(P key sym . syms)] is equivalent to @racket[(apply
 values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
 ]
+}
+
+@section{Global Resolver}
+@defmodule[unlike-assets/resolver/shared]
+
+@racketmodname[unlike-assets/resolver/shared] behaves
+as Racket would if it could evaluate something like this:
+
+@racketblock[(begin (dynamic-rerequire "index.js")
+                    (dynamic-require "index.js" 'minified))]
+
+Even so, this is a poor-man's module resolver. It does not produce
+Racket modules, but it does let you write expressions like @racket[(Ps
+"index.js" 'minified)] to import non-Racket data.
+
+@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]{
+This is a globally shared build system. You need one of these to give
+the impression of an omnipresent module resolver. The default value of
+this parameter is a build system that uses
+@racket[(current-key->live-build)] to resolve builds.
+
+Since build systems accrue assets over time, you can reclaim some
+memory as follows, assuming you do not have references to assets lying
+around:
+
+@racketblock[
+(code:comment "Replace the shared build system with a new one")
+(current-u/a-build-system
+ (make-u/a-build-system
+  (lambda (key recurse)
+   ((current-key->live-build) key recurse))))
+(collect-garbage ...)
+]
+}
+
+@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]{
+A shared procedure that controls how keys map to living builds.
+
+The default value for @racket[current-key->live-build] raises an
+error that instructs you to provide your own handler.
+}
+
+@defproc[(procure/weak [key string?]) stateful-cell?]{
+Equivalent to @racket[((current-u/a-build-system) key stateful-cell?)].
+
+This starts an asynchronous build for an asset (if needed), but does
+not wait for the result. Returns the async cell representing the thread
+that builds the asset.
+}
+
+@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c]{
+Equivalent to:
+
+@racketblock[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)]
+
+This starts a build for an asset (if needed), waits for the results,
+then returns requested data.
+}
+
+@defproc[(procure/strong/with-contract [key string?] [c contract?] ...) asset?]{
+Like @racket[procure/strong], but this does not extract individual values
+from an asset. It instead waits for and returns the asset by @racket[key],
+and raises @racket[exn:fail:contract] if that asset does not fulfil @racket[c].
+}
+
+@deftogether[(
+@defthing[Pw procure/weak]
+@defthing[Ps procure/strong]
+@defthing[Ps/c procure/strong/with-contract]
+)]{
+You'll probably use the @tt{procure/*} procedures often enough to want
+these abbreviations.
+}
+
+@defproc[(make-key->live-build/sequence [maybe-makers (-> string?
+                                                          u/a-build-system?
+                                                          (or/c #f live-build?))] ...)
+                                        procedure?]{
+Returns a procedure equivalent to the following:
+
+@racketblock[
+(λ (key recurse)
+   (ormap (λ (p) (p key recurse))
+          maybe-makers))]
+
+You can use this to sequence several procedures that map keys to live builds.
 }

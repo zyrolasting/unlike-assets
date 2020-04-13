@@ -4,7 +4,8 @@
          racket/sequence
          racket/set
          kinda-ferpy
-         unlike-assets/core)
+         "model.rkt"
+         "assets.rkt")
 
 (provide (rename-out [procure/weak Pw]
                      [procure/strong Ps]

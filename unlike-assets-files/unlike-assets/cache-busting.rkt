@@ -22,7 +22,7 @@
           (if (exn? mtime-or-exn)
               mtime-or-exn
               (asset [input-file-path key]
-                     [dst (compute-name key)]
+                     [output-file-path (compute-name key)]
                      [->http-response
                       (response/output #:mime-type #"application/octet-stream"
                                        (λ (out)

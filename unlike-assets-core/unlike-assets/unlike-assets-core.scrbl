@@ -7,11 +7,17 @@
                     unlike-assets/core/model
                     unlike-assets/core/assets]]
 
-@title{@tt{unlike-assets-core}}
+@title{Unlike Assets: Core Model}
 @author{Sage Gerard}
+
+@defmodule[unlike-assets/core]
 
 This package provides the groundwork for the @tt{unlike-assets-*}
 package namespace, without imposing restrictions on use.
+
+@racketmodname[unlike-assets/core] provides all bindings from
+@racketmodname[unlike-assets/core/model] and
+@racketmodname[unlike-assets/core/assets].
 
 @section{Defining Asset Builders}
 @defmodule[unlike-assets/core/model]

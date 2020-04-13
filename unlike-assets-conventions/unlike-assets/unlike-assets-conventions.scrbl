@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@title{@tt{unlike-assets-conventions}}
+@title{@tt{Conventions for Unlike Assets}}
 
 @require[@for-label[racket/base
                     racket/contract

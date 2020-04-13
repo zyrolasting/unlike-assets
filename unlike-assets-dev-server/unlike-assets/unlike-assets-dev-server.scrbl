@@ -11,8 +11,8 @@
 
 @defmodule[unlike-assets/dev-server]
 
-This module provides tools for setting up a development server when
-working with unlike assets.
+This module provides tools for setting up a development server that
+forwards requests to the unlike asset resolver.
 
 @defproc[(default-url->asset-key [u url?])]{
 Equivalent to @racket[(string-join (map path/param-path (url-path u)) "/")].

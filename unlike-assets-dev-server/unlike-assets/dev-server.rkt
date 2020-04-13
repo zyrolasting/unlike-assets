@@ -3,9 +3,8 @@
 (require racket/contract
          web-server/http/request-structs
          web-server/http/response-structs
-         unlike-assets/reactive
-         unlike-assets/conventions
-         web-server/dispatchers/dispatch)
+         web-server/dispatchers/dispatch
+         unlike-assets/conventions)
 
 (define procure-responder/c
   (-> string? (asset/c [->http-response (-> request? response?)])))
@@ -20,7 +19,6 @@
          racket/function
          racket/string
          web-server/web-server
-         unlike-assets/logging
          (prefix-in lifter:
                     web-server/dispatchers/dispatch-lift))
 

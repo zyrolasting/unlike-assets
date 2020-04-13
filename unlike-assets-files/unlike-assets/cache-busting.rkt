@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require unlike-assets/reactive)
+(require unlike-assets/conventions)
 
 (define (compute-name file-path)
   (call-with-input-file file-path

@@ -7,8 +7,7 @@
 (provide start-live-build!
          make-u/a-build-system
          live-build?
-         u/a-build-system?
-         make-key->live-build/sequence)
+         u/a-build-system?)
 
 (define (of-name str)
   (let ([s (string->uninterned-symbol str)])
@@ -68,12 +67,6 @@
       (hash-set! known key (key->live-build key u/a)))
     (hash-ref known key))
   u/a)
-
-
-(define (make-key->live-build/sequence . maybe-makers)
-  (λ (key recurse)
-    (ormap (λ (p) (p key recurse))
-           maybe-makers)))
 
 
 (module+ test

@@ -22,6 +22,7 @@ with this project, you should use the latest version.
 * Divided source into several multi-collection packages.
 * Add reactive asset definitions in `modular.rkt`.
 * Expand `policy.rkt` to include helpers for `reactive.rkt`.
+* Reorganize filesystem to support many packages.
 
 ## [1.0] - 2019-11-21
 * Add `#:strict?` keyword argument to compiler

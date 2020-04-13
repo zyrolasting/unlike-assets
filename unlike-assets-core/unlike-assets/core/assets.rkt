@@ -35,7 +35,7 @@ can enforce reasonable constraints and maintain readable code.
 
 (require racket/string
          kinda-ferpy
-         "system.rkt"
+         "model.rkt"
          (for-syntax racket/base
                      syntax/parse))
 

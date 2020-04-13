@@ -1,2 +1,2 @@
 #lang info
-(define scribblings '(("scribblings/unlike-assets.scrbl" ())))
+(define scribblings '(("unlike-assets-core.scrbl" ())))

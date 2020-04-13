@@ -4,39 +4,22 @@
                     racket/contract
                     racket/function
                     kinda-ferpy
-                    unlike-assets]]
+                    unlike-assets/core/model
+                    unlike-assets/core/assets]]
 
-@title{Unlike Assets: Build Video Games, Websites, and More}
+@title{@tt{unlike-assets-core}}
 @author{Sage Gerard}
 
-Unlike Assets (UA) builds websites, video games, music compositions,
-and other complicated creative projects. It's like
-@hyperlink["https://webpack.js.org/"]{Webpack}, but better.
+This package provides the groundwork for the @tt{unlike-assets-*}
+package namespace, without imposing restrictions on use.
 
-UA works by naming arbitrary Racket values and tracking them in a
-dependency graph. This means two things:
+@section{Defining Asset Builders}
+@defmodule[unlike-assets/core/model]
 
-@itemlist[
-@item{@bold{You don't have to manually keep resources in sync while
-you work.} If you edit a stylesheet, all dependendent web pages will
-automatically reference the production-ready version of that
-stylesheet.}
-
-@item{@bold{You can compose data in interesting ways.}
-You can make an image depend on music to produce a live visualization.
-You can make a 3D model depend on a URL such that changing the URL loads
-a texture from that location.}]
-
-Altogether, UA cuts out the busywork in imaginative programming.
-
-@section{Model}
-@defmodule[unlike-assets/model]
-
-The underlying model uses @racketmodname[kinda-ferpy] to track
-dependencies between assets and build them both lazily and
-asynchronously. This means it's not I/O bound, it will only do as much
-work as necessary, it won't do redundant work, and it will notice
-changes.
+@racketmodname[unlike-assets/core/model] uses
+@racketmodname[kinda-ferpy] to track Racket values with
+dependencies. It will keep dependent values up-to-date when any
+dependencies change, asynchronously.
 
 @defproc[(u/a-build-system? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] is an unlike asset build system created by @racket[make-u/a-build-system].
@@ -161,8 +144,8 @@ that key will be overwritten. Once evaluated, @racket[(eq? (S key) (S
 (sys "passage.txt" number?)
 ]
 
-@section{Reactive Assets as Modules}
-@defmodule[unlike-assets/assets]
+@section{@tt{unlike-assets/core/assets}}
+@defmodule[unlike-assets/core/assets]
 
 Assets are just hashes with lipstick. They combine with
 @racket[make-u/a-build-system] to create permissive module resolvers.
@@ -224,8 +207,8 @@ This...
 
 @defproc[(make-u/a-procure-procedure [S u/a-build-system?])
                                      (->* (string?) #:rest (listof symbol?) any/c)]{
-Returns a @tech{procure} procedure @racketfont{P} that behaves like
-a dynamic module resolver for results matching @racket[(S key asset?)].
+Returns a procedure @racketfont{P} that behaves like a dynamic module
+resolver for results matching @racket[(S key asset?)].
 
 @itemlist[
 @item{@racket[(P key)] is equivalent to @racket[(S key asset?)].}

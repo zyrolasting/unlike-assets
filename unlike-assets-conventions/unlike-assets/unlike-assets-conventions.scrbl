@@ -33,29 +33,63 @@ Even so, this is a poor-man's module resolver. It does not produce
 Racket modules, but it does let you write expressions like @racket[(Ps
 "index.js" 'minified)] to import non-Racket data.
 
+@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]{
+This is a globally shared build system. You need one of these to give
+the impression of an omnipresent module resolver. The default value of
+this parameter is a build system that uses
+@racket[(current-key->live-build)] to resolve builds.
+
+Since build systems accrue assets over time, you can reclaim some
+memory as follows, assuming you do not have references to assets lying
+around:
+
+@racketblock[
+(code:comment "Replace the shared build system with a new one")
+(current-u/a-build-system
+ (make-u/a-build-system
+  (lambda (key recurse)
+   ((current-key->live-build) key recurse))))
+(collect-garbage ...)
+]
+}
+
+@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]{
+A shared procedure that controls how keys map to living builds.
+
+The default value for @racket[current-key->live-build] raises an
+error that instructs you to provide your own handler.
+}
+
+@defproc[(procure/weak [key string?]) stateful-cell?]{
+Equivalent to @racket[((current-u/a-build-system) key stateful-cell?)].
+
+This starts an asynchronous build for an asset (if needed), but does
+not wait for the result. Returns the async cell representing the thread
+that builds the asset.
+}
+
+@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c]{
+Equivalent to:
+
+@racketblock[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)]
+
+This starts a build for an asset (if needed), waits for the results,
+then returns requested data.
+}
+
+@defproc[(procure/strong/with-contract [key string?] [c contract?] ...) asset?]{
+Like @racket[procure/strong], but this does not extract individual values
+from an asset. It instead waits for and returns the asset by @racket[key],
+and raises @racket[exn:fail:contract] if that asset does not fulfil @racket[c].
+}
+
 @deftogether[(
-@defthing[current-u/a-build-system (parameter/c u/a-build-system?)]
-@defthing[current-key->live-build  (parameter/c (-> string? u/a-build-system? live-build?))]
-@defproc[(procure/weak [key string?]) stateful-cell?]
-@defproc[(procure/strong [key string?] [sym symbol?] ...) any/c]
 @defthing[Pw procure/weak]
 @defthing[Ps procure/strong]
+@defthing[Ps/c procure/strong/with-contract]
 )]{
-This is an interface for a shared build system, as defined by
-@racketmodname[unlike-assets/core] for the current process.
-
-@racket[current-u/a-build-system] uses @racket[current-key->live-build]
-to resolve builds. By default, @racket[current-key->live-build] raises an
-error that instructs you to provide your own handler.
-
-@itemlist[
-@item{@racket[(procure/weak key)], or @racket[(Pw key)] is
-equivalent to @racket[((current-u/a-build-system) key stateful-cell?)]. It
-starts a build for an asset (if needed), but does not wait for the results.}
-@item{@racket[(procure/strong key . syms)], or @racket[(Ps key . syms)] is
-equivalent to @racket[(apply (make-u/a-procure-procedure (current-u/a-build-system)) key syms)].
-It starts a build for an asset (if needed), waits for the results, then returns requested data.}
-]
+You'll probably use the @tt{procure/*} procedures often enough to want
+these abbreviations.
 }
 
 @defproc[(make-key->live-build/sequence [maybe-makers (-> string?
@@ -69,7 +103,7 @@ Returns a procedure equivalent to the following:
    (ormap (λ (p) (p key recurse))
           maybe-makers))]
 
-Use this to sequence several procedures that map keys to live builds.
+You can use this to sequence several procedures that map keys to live builds.
 }
 
 @section{Contracts}
@@ -114,7 +148,7 @@ Returns a relative path string that a file located at
 of @racket[key] would produce.
 
 If the asset procured with @racket[key] does not match @racket[asset/file-destined/c], then
-this procedure will raise @racket[exn:fail:contract?].
+this procedure will raise @racket[exn:fail:contract].
 
 When curried with a complete path, you can compute production-ready paths while building
 an asset.

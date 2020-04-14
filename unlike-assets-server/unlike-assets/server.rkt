@@ -1,11 +1,11 @@
 #lang racket/base
 
 (require racket/contract
+         racket/pretty
          web-server/http/request-structs
          web-server/http/response-structs
          web-server/dispatchers/dispatch
-         unlike-assets/conventions)
-
+         unlike-assets/resolver)
 
 (define procure-responder/c
   (-> string? (asset/c [->http-response (-> request? response?)])))
@@ -28,15 +28,21 @@
 (define asset/serveable/c
   (asset/c (->http-response (-> request? response?))))
 
-(define (capture-error-display e)
-  (parameterize ([current-error-port (open-output-string)])
-    ((error-display-handler) (exn-message e) e)
-    (get-output-string (current-error-port))))
-
-(define (show-error e)
+(define (respond/text str)
   (response/output #:code 500
                    #:mime-type #"text/plain; charset=utf-8"
-                   (λ (o) (write-bytes (string->bytes/utf-8 (capture-error-display e)) o))))
+                   (λ (o) (write-bytes (string->bytes/utf-8 str) o))))
+
+(define (show-error e)
+  (respond/text
+   (parameterize ([current-error-port (open-output-string)])
+     ((error-display-handler) (exn-message e) e)
+     (get-output-string (current-error-port)))))
+
+(define (show-asset a)
+  (respond/text
+   (parameterize ([current-output-port (open-output-string)])
+     (pretty-print (a)))))
 
 (define (default-url->asset-key u)
   (string-join (map path/param-path (url-path u)) "/"))
@@ -45,10 +51,9 @@
   (lifter:make
    (λ (req)
      (with-handlers ([exn:fail? show-error])
-       ((Ps/c (url->asset-key (request-uri req))
-              asset/serveable/c)
-        '->http-response)
-       req))))
+       (define a (Ps (url->asset-key (request-uri req))))
+       (define respond (a '->http-response (λ (req) (show-asset a))))
+       (respond req)))))
 
 (define (start-server url->asset-key [port 8080])
   (serve #:dispatch (make-dispatcher url->asset-key)

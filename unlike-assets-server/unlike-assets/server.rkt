@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/contract
+         racket/exn
          racket/pretty
          web-server/http/request-structs
          web-server/http/response-structs
@@ -34,10 +35,7 @@
                    (λ (o) (write-bytes (string->bytes/utf-8 str) o))))
 
 (define (show-error e)
-  (respond/text
-   (parameterize ([current-error-port (open-output-string)])
-     ((error-display-handler) (exn-message e) e)
-     (get-output-string (current-error-port)))))
+  (respond/text (exn->string e)))
 
 (define (show-asset a)
   (respond/text

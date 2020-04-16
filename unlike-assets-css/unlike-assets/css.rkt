@@ -5,40 +5,46 @@
 
 (require racket/string
          css-expr
-         unlike-assets/reactive)
+         unlike-assets/resolver
+         unlike-assets/racket-modules)
 
-(define (make-style-accumulator)
-  (let ([decls '()])
-    (λ d (if (eq? d '())
-             (string-join (map css-expr->css decls) "")
-             (set! decls (append decls d))))))
+; TODO: Target both Racket modules and CSS files.
+(define (make-css-extension make-stylesheet-path)
+  (make-racket-module-builder make-stylesheet-path))
 
-(define (discard-meaningless-semicolons css-str)
-  (regexp-replace* #px";\\s*\\}" css-str "}"))
+(define (font-face-src url-string [format-name #f] [suffix #f])
+  (define url-string/applicable
+    (if suffix
+        (maybe-add-suffix url-string suffix)
+        url-string))
+  (if format-name
+      `((apply url ,url-string/applicable
+        (apply format ,format-name)))
+      `(apply url ,url-string/applicable)))
 
-(define (font-face font-family ref style weight)
-  (define (&+ fmt-string)
-    (& (format fmt-string ref)))
-  (define eot-href (&+ "~a.eot"))
+(define (font-face-src/woff2 url-string)
+  (font-face-src url-string "woff2" ".woff2"))
+
+(define (font-face-src/woff url-string)
+  (font-face-src url-string "woff" ".woff"))
+
+(define (font-face-src/ttf url-string)
+  (font-face-src url-string "truetype" ".ttf"))
+
+(define (font-face-src/eot url-string ie-fix)
+  (define eot-href (maybe-add-suffix url-string ".eot"))
+  (if ie-fix
+      (font-face-src eot-href "embedded-opentype" "#iefix")
+      (font-face-src eot-href #f)))
+
+(define (font-face font-family style weight . srcs)
   (css-expr
    [@font-face
     #:font-family ,font-family
-    #:src (apply url ,eot-href)
-    #:src ((apply url ,(format "~a?#iefix" eot-href))
-           (apply format "embedded-opentype"))
-    ((apply url ,(&+ "~a.woff2"))
-     (apply format "woff2"))
-    ((apply url ,(&+ "~a.woff"))
-     (apply format "woff"))
-    ((apply url ,(&+ "~a.ttf"))
-     (apply format "truetype"))
+    #:src ,@srcs
     #:font-style ,style
     #:font-weight ,weight
     ]))
-
-(define (make-stylesheet input-path css)
-  (asset [input-file-path input-path]
-         [output-file-name (sha-name (open-input-string css) #".css")]))
 
 ; Defines a #lang read as a header and a body.
 ; The two are separated by exactly three dashes.
@@ -58,27 +64,34 @@
 
   (define (read+ in)
     (read-syntax+ #f in))
+
   (define (read-syntax+ src in)
     (define content (port->list read in))
-    (define-values (preamble rules) (splitf-at content (λ (x) (not (eq? x '---)))))
+
+    (define-values (preamble rules)
+      (splitf-at content (λ (x) (not (eq? x '#:begin-css)))))
 
     (with-syntax ([(exprs ...) #`#,preamble]
                   [(css-exprs ...) #`#,(cdr rules)]
                   [src-string (and src (path->string src))])
       #'(module content racket/base
-          (provide make-live-asset)
-          (require unlike-assets/css)
-
+          (provide make-asset)
+          (require unlike-assets/css
+                   unlike-assets/files/resolve)
           (define add-css-expr! (make-style-accumulator))
 
-          (current-working-stylesheet
-           (and (string? src-string)
-                (string->path src-string)))
+          (define input-file
+            (and (string? src-string)
+                 (string->path src-string)))
+
+          (define-relative-dependency-lookups input-file)
 
           exprs ...
+
           (add-css-expr! (css-expr css-exprs ...))
           (define css (discard-meaningless-semicolons (add-css-expr!)))
           (define (make-asset input-file)
             (make-stylesheet input-file css))
+
           (module+ main
             (displayln css))))))

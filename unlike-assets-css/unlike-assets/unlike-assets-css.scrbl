@@ -5,10 +5,7 @@
 @require[@for-label[racket/base]]
 @defmodule[unlike-assets/css]
 
-This module integrates CSS with an
-@racketmodname[unlike-assets/reactive] build system.  It provides a
-pure-Racket CSS preprocessor, a hybrid language of CSS and Racket, and
-minified output.
+This module produces CSS stylesheets as living assets.
 
 @section{Racket-CSS Hybrid Language}
 When used as a @litchar{#lang}, @racketmodname[unlike-assets/css]
@@ -32,13 +29,10 @@ The Racket section has all of the bindings from
 (code:comment "that would be painful to write by hand.")
 (add-css-expr! (font-face "code" "fonts/sourcecodepro-bold-webfont" 'normal 'bold))
 
-(code:comment "Add three dashes to tell the reader to start")
-(code:comment "reading CSS expressions.")
----
+(code:comment "CSS expressions start in a named section.")
+#:begin-css
 
 [* #:box-sizing border-box]
 [h1 #:text-transform uppercase]
 [.my-widget #:color ,color]
 ]
-
-@section{API Reference}

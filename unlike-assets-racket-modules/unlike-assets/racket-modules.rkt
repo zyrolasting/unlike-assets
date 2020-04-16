@@ -20,16 +20,17 @@
 (define (normalize-make-module-path v)
   (if (or (path-for-some-system? v)
           (path-string? v))
-      (if (directory-exists? v)
-          (λ (key)
-            (with-handlers ([exn:fail? (λ _ #f)])
-              (define maybe-racket-module-path (build-path v key))
-              (and ((flat-contract-predicate module-path/c) maybe-racket-module-path)
-                   (equal? (path-get-extension maybe-racket-module-path) #".rkt")
-                   maybe-racket-module-path)))
-          (raise-argument-error 'racket-modules
-                                "A path to an existing directory"
-                                v))
+      (let ([complete (simplify-path v)])
+        (if (directory-exists? complete)
+            (λ (key)
+              (with-handlers ([exn:fail? (λ _ #f)])
+                (define maybe-racket-module-path (build-path complete key))
+                (and ((flat-contract-predicate module-path/c) maybe-racket-module-path)
+                     (equal? (path-get-extension maybe-racket-module-path) #".rkt")
+                     maybe-racket-module-path)))
+            (raise-argument-error 'racket-modules
+                                  "A path to an existing directory"
+                                  v)))
       v))
 
 

@@ -1,12 +1,13 @@
 #lang racket/base
 
-(require racket/string
-         racket/rerequire
-         unlike-assets/reactive)
+(require racket/rerequire
+         unlike-assets/resolver)
 
-(define (key->maybe-build key recurse)
-  (and (string-suffix? key ".rkt")
-       (start-live-build! key
-                          #:sample! (λ () (dynamic-rerequire key))
-                          #:build! (λ _ (dynamic-require key 'make-asset))
-                          #:suppress? (λ (a b) (null? b)))))
+(define (racket-modules make-module-path)
+  (λ (key recurse)
+    (let ([module-path (make-module-path key)])
+      (and module-path
+           (start-live-build! key
+                              #:sample! (λ () (dynamic-rerequire key #:verbosity 'none))
+                              #:build! (λ _ (dynamic-require key 'make-asset))
+                              #:suppress? (λ (a b) (null? b)))))))

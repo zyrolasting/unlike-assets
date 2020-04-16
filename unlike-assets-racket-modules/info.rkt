@@ -1,3 +1,3 @@
 #lang info
 (define collection 'multi)
-(define deps '("unlike-assets-lib"))
+(define deps '("unlike-assets-resolver"))

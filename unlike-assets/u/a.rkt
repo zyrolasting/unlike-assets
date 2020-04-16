@@ -1,13 +1,10 @@
 #lang racket/base
 
-(require (for-syntax racket/base))
-(provide (except-out (all-from-out racket/base) #%module-begin)
-         (rename-out [#%module-begin+ #%module-begin]))
+(require (for-syntax racket/base)
+         racket/runtime-path
+         unlike-assets/resolver)
 
-(define-syntax (#%module-begin+ stx)
-  (syntax-case stx ()
-    [(_ body ...)
-     #'(#%module-begin
-        (require racket/runtime-path
-                 unlike-assets/resolver)
-        body ...)]))
+(provide (all-from-out racket/base)
+         (for-syntax (all-from-out racket/base))
+         (all-from-out racket/runtime-path)
+         (all-from-out unlike-assets/resolver))

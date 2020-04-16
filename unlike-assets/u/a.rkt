@@ -1,14 +1,13 @@
 #lang racket/base
 
-(module reader racket/base
-  (provide (rename-out [read+ read]
-                       [read-syntax+ read-syntax]))
-  (require racket/port)
-  (define (read+ in)
-    (read-syntax+ #f in))
-  (define (read-syntax+ src in)
-    (with-syntax ([(code ...) (port->list read-syntax in)])
-      #'(module anonymous racket/base
-          (require unlike-assets/resolver
-                   racket/runtime-path)
-          code ...))))
+(require (for-syntax racket/base))
+(provide (except-out (all-from-out racket/base) #%module-begin)
+         (rename-out [#%module-begin+ #%module-begin]))
+
+(define-syntax (#%module-begin+ stx)
+  (syntax-case stx ()
+    [(_ body ...)
+     #'(#%module-begin
+        (require racket/runtime-path
+                 unlike-assets/resolver)
+        body ...)]))

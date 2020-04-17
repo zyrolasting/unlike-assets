@@ -3,18 +3,16 @@
 #|
 Can you keep a secret? An asset is just a hash.
 
-When you do something weird, like try to import a non-Racket thing
-into Racket, as if it's a module, you have no idea what you're going
+When you do something weird, like try to import a non-Racket
+object as if it's a module, you have no idea what you're going
 to get. Unless you want to involve fancy static analysis tricks,
 you can't derive struct definitions or guarentee type safety.
-Hashes are just an off-the-shelf way to capture the data fields
-of an asset.
+Hashes are a loose tool for a loose job.
 
 Everything in this module is about giving hashes structure with
 contracts and semantic means for grabbing fields, so that you
 can enforce reasonable constraints and maintain readable code.
 |#
-
 (require racket/contract)
 (provide asset/c
          asset

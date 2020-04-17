@@ -53,6 +53,6 @@
        (define respond (a '->http-response (λ (req) (show-asset a))))
        (respond req)))))
 
-(define (start-server url->asset-key [port 8080])
+(define (start-server [url->asset-key default-url->asset-key] [port 8080])
   (serve #:dispatch (make-dispatcher url->asset-key)
          #:port port))

@@ -11,25 +11,33 @@ Imagine if Racket allowed this:
 
 That's what `unlike-assets` does.
 
+## Okay, I'm Listening.
 `unlike-assets` is a bit like Webpack, except leaner and powered by
 Racket. It ships with a configurable module resolver for non-Racket
 ecosystems. Under this light, an SVG document, a CSS stylesheet, an
-SPIR-V shader, or a tarball are importable objects with reload
-support.
+SPIR-V shader, or a tarball are importable objects that are never out
+of date.
 
-One way this can be useful is building a CSS stylesheet according to
-your preferences, so that you end up with a production-ready document
-like so:
+Let's say you reference a stylesheet using one of the _procure_
+functions provided by this project:
 
 ```
 `(link ((rel "stylesheet") (href ,(Ps& "styles.css"))))
-; '(link ((rel "stylesheet") (href "../8a2b14.css")))
-; "../8a2b14.css" is a minified sheet that really is one directory up
-; from where this document will be in production.
 ```
 
-But here's the thing: If you edit the stylesheet and move it somewhere else,
-all dependent expressions remain in sync.
+Given your configuration, this will produce a production-ready
+variant of the element.
+
+```
+'(link ((rel "stylesheet") (href "../8a2b14.css")))
+```
+
+In this context, `../8a2b14.css` is a minified sheet that _really is_
+one directory up from where this document will be in production. That
+level of correctness is derived from your configuration.
+
+Assume you edit the stylesheet and move it somewhere else while you work.
+All you have to do is evaluate the dependent expression again.
 
 ```
 `(link ((rel "stylesheet") (href ,(Ps& "styles.css"))))
@@ -38,30 +46,35 @@ all dependent expressions remain in sync.
 
 ## What's Here?
 This repository tracks a contained ecosystem of packages. It all starts in
-`unlike-assets-resolver`, which provides a configurable "module resolver"
-that asynchronously maps string URLs to _up-to-date_ Racket values.  I
-use scare quotes because the Racket values are glorified hashes, not
-Racket modules.
+`unlike-assets-resolver`, which provides a configurable module resolver
+that asynchronously maps string URLs to up-to-date hashes.
 
+The other packages play different roles. Most of them define a kind of
+asset that the resolver can use. Others offer recipes that ease use
+of lower-level packages. If you don't want to think about it too much,
+you'll just want the `unlike-assets` package, which bundles useable
+defaults with a `#lang`.
 
-## Anticipated Question: "WTF is with this filesystem. How do I require anything?!"
-**Short answer**: Racket made me do it, and the docs for each package will
-mention a relevant `(require ...)` lying around. Use it.
+Once the defaults no longer suffice, you will need to install
+the packages relevant to you.
+
+## WTF is with this filesystem?
+**Short answer**: Racket made me do it. Read the docs.
 
 **Long answer:** Racket's module resolver thinks of _packages_ and
 _collections_ as two different things. If you come from JavaScript or
 Python, you can install a package and type that package's name with an
-`import` or `require`.  That's NOT how it works here.
+`import` or `require`. _That's not how it works here._
 
-In Racket, a collection is a symbolic name for some logical group of
-modules. Packages **_contribute_** to collections. So when you install
+In Racket, a collection is a logical grouping of modules. Packages
+**_contribute_** to collections. So when you install
 `unlike-assets-css`, it will toss a `css` module into the
-`unlike-assets` collection so you can write `(require unlike-assets/css)`.
+`unlike-assets` collection so you can write `(require
+unlike-assets/css)`.
 
-Racket (more specifically `raco`) has filesystem conventions for
-supporting this kind of workflow.  This is why you see a bunch of
-nested directories with the same names, and files with different names
-for the same role.
+Racket (more specifically `raco`) has file conventions for this
+workflow. This is why you see a bunch of nested directories with the
+same names, and files with different names for the same role.
 
 
 ## Optional Reading: Project Vision

@@ -12,15 +12,20 @@
                      [procure/strong/with-contract Ps/c])
          (contract-out
           [in-assets (->* () (u/a-build-system? #:keep? (or/c flat-contract? (-> asset? any/c))) sequence?)]
-          [make-key->live-build/sequence
-           (->* ()
-                #:rest (listof (-> string? u/a-build-system? (or/c #f live-build?)))
-                (-> string? u/a-build-system? (or/c #f live-build?)))]
-          [current-key->live-build (parameter/c (-> string? u/a-build-system? live-build?))]
+          [u/a (->* () #:rest (listof ->live-build/c) void?)]
+          [current-key->live-build (parameter/c ->live-build/c)]
           [current-u/a-build-system (parameter/c u/a-build-system?)]
           [procure/weak (-> string? stateful-cell?)]
           [procure/strong (->* (string?) #:rest (listof symbol?) any/c)]
-          [procure/strong/with-contract (-> string? contract? asset?)]))
+          [procure/strong/with-contract (-> string? contract? asset?)]
+          [asset/with-read/c contract?]
+          [asset/with-write/c contract?]))
+
+(define asset/with-write/c
+  (asset/c [write (-> output-port? any)]))
+
+(define asset/with-read/c
+  (asset/c [read (-> input-port? any)]))
 
 (define (in-assets [sys (current-u/a-build-system)] #:keep? [keep? (λ _ #t)])
   (sequence-filter (if (flat-contract? keep?) (flat-contract-predicate keep?) keep?)
@@ -28,12 +33,27 @@
                                    (living-build asset?))
                                  (in-set (apply seteq (hash-values (sys)))))))
 
+(define (no-impl . _)
+  (error "current-key->live-build is not defined"))
+
 (define current-key->live-build
-  (make-parameter (λ _ (error "current-key->live-build is not defined"))))
+  (make-parameter no-impl))
 
 (define current-u/a-build-system
   (make-parameter (make-u/a-build-system
                    (λ (k s) ((current-key->live-build) k s)))))
+
+(define (extend! p)
+  (define current (current-key->live-build))
+  (current-key->live-build
+   (if (eq? current no-impl)
+       p
+       (λ (k r)
+         (or (current k r)
+             (p k r))))))
+
+(define (u/a . ps)
+  (void (map extend! ps)))
 
 (define (procure/weak key)
   ((current-u/a-build-system) stateful-cell?))
@@ -41,11 +61,6 @@
 (define (procure/strong key . syms)
   (apply (make-u/a-procure-procedure (current-u/a-build-system))
          key syms))
-
-(define (make-key->live-build/sequence . maybe-makers)
-  (λ (key recurse)
-    (ormap (λ (p) (p key recurse))
-           maybe-makers)))
 
 (define (procure/strong/with-contract key c)
   (with-contract procure/strong/with-contract #:result c (procure/strong key)))

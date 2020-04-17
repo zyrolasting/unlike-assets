@@ -12,7 +12,7 @@
 
 @defmodule[unlike-assets/resolver]
 
-This package provides a configurable module resolver for non-Racket
+This module provides a configurable module resolver for non-Racket
 assets.
 
 @racketmodname[unlike-assets/resolver] provides all bindings from
@@ -224,6 +224,13 @@ values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
 ]
 }
 
+@deftogether[(
+@defthing[asset/writes/c (asset/c [write (-> output-port? (or/c void? exact-nonnegative-integer?))])]
+@defthing[asset/reads/c  (asset/c [read (-> input-port? any/c)])]
+)]{
+These contracts match assets that include procedures to read or write information using ports.
+}
+
 @section{Global Resolver}
 @defmodule[unlike-assets/resolver/shared]
 
@@ -296,16 +303,8 @@ You'll probably use the @tt{procure/*} procedures often enough to want
 these abbreviations.
 }
 
-@defproc[(make-key->live-build/sequence [maybe-makers (-> string?
-                                                          u/a-build-system?
-                                                          (or/c #f live-build?))] ...)
-                                        procedure?]{
-Returns a procedure equivalent to the following:
+@defproc[(u/a [maybe-makers (-> string? u/a-build-system? (or/c #f live-build?))] ...) procedure?]{
+Extends @racket[current-key->live-build] with the given living build procedures.
 
-@racketblock[
-(λ (key recurse)
-   (ormap (λ (p) (p key recurse))
-          maybe-makers))]
-
-You can use this to sequence several procedures that map keys to live builds.
+The given procedures are consulted in the given order.
 }

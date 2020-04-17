@@ -1,22 +1,21 @@
 #lang racket/base
 
-(require (only-in racket/function curry identity negate)
+(require racket/contract
+         idiocket/function
          racket/undefined
          kinda-ferpy)
 
 (provide start-live-build!
          make-u/a-build-system
          live-build?
-         u/a-build-system?)
-
-(define (of-name str)
-  (let ([s (string->uninterned-symbol str)])
-    (values
-     (λ (p) (procedure-rename p s))
-     (λ (p) (eq? (object-name p) s)))))
+         u/a-build-system?
+         ->live-build/c)
 
 (define-values (make-live-build-proc live-build?) (of-name "live-build"))
 (define-values (make-u/a-build-system-proc u/a-build-system?) (of-name "u/a-build-system"))
+
+(define ->live-build/c
+  (-> string? u/a-build-system? (or/c #f live-build?)))
 
 (define (<log level event target)
   (log-message (current-logger)
@@ -25,15 +24,7 @@
                (format "~a: ~a" event target)
                target))
 
-(define (apply-until v [stop? (negate procedure?)])
-  (if (stop? v)
-      v
-      (apply-until (v) stop?)))
-
-(define (start-live-build! #:sample!   sample!
-                           #:suppress? [suppress? eq?]
-                           #:build!    build!
-                           key)
+(define (start-live-build! key #:sample! sample! #:suppress? [suppress? eq?] #:build! build!)
   (define initial-value (sample!))
   (define %signal (% initial-value))
   (define %producer
@@ -49,7 +40,6 @@
      (unless (suppress? (%signal) next)
        (%signal next))
      (apply-until %producer stop?))))
-
 
 (define (make-u/a-build-system key->live-build [known (make-hash)])
   (define u/a
@@ -67,7 +57,6 @@
       (hash-set! known key (key->live-build key u/a)))
     (hash-ref known key))
   u/a)
-
 
 (module+ test
   (require rackunit)

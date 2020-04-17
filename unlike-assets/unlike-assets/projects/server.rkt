@@ -3,6 +3,8 @@
 (require racket/contract
          racket/exn
          racket/pretty
+         racket/tcp
+         net/url
          web-server/http/request-structs
          web-server/http/response-structs
          web-server/dispatchers/dispatch
@@ -14,12 +16,11 @@
 (provide
  (rename-out [asset/serveable/c asset/servable/c])
  (contract-out
-  [make-dispatcher (-> procure-responder/c dispatcher/c)]
-  [start-server (->* (procure-responder/c) (exact-positive-integer?) procedure?)]
+  [make-dispatcher (->* () ((-> url? string?)) dispatcher/c)]
+  [start-server (->* () ((-> url? string?) #:port listen-port-number?) procedure?)]
   [asset/serveable/c contract?]))
 
-(require net/url
-         racket/format
+(require racket/format
          racket/function
          racket/string
          web-server/web-server
@@ -53,6 +54,6 @@
        (define respond (a '->http-response (λ (req) (show-asset a))))
        (respond req)))))
 
-(define (start-server [url->asset-key default-url->asset-key] [port 8080])
+(define (start-server #:port [port 8080] [url->asset-key default-url->asset-key])
   (serve #:dispatch (make-dispatcher url->asset-key)
          #:port port))

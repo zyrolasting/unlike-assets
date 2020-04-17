@@ -9,7 +9,7 @@
                     web-server/http/response-structs
                     web-server/dispatchers/dispatch
                     unlike-assets/resolver
-                    unlike-assets/projects/server]]
+                    unlike-assets/projects]]
 
 @title{Project Definitions}
 

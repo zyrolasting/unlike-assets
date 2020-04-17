@@ -3,6 +3,7 @@
 (provide u/a-cli)
 (require racket/cmdline
          racket/logging
+         racket/tcp
          unlike-assets/resolver
          unlike-assets/files
          raco/command-name
@@ -10,9 +11,17 @@
          "distributor.rkt")
 
 (define (u/a-cli)
-  (define action start-server)
+  (define port 8080)
   (define level 'info)
   (define yes #f)
+
+  (define (run-server/wait)
+    (printf "Listening on port ~a~n" port)
+    (displayln "Stop the server with ^C")
+    (define stop (start-server #:port port))
+    (dynamic-wind void
+                  (λ () (sync/enable-break never-evt))
+                  stop))
 
   (define (confirm prompt)
     (or yes
@@ -22,20 +31,32 @@
             [(#\y #\Y) #t]
             [else #f]))))
 
+  (define action
+    (λ () (displayln "No action specified. Run again with -h to see options.")))
+
   (command-line
    #:program (short-program+command-name)
    #:usage-help
    "Compile <asset-refs> according to <policy-module>."
    "Run `raco doc unlike-assets` for documentation."
    #:once-each
-   [("-y" "--yes") ("Answer yes to any prompts.")
-                   (set! yes #t)]
-   [("-v" "--verbose") ("Show debug level logs")
-                       (set! level 'debug)]
+   [("-p" "--port") user-port
+    "If -s is set, sets the port on which to listen for connections."
+    (begin
+      (define n (string->number user-port))
+      (if (listen-port-number? n)
+          (set! port n)
+          (error 'unlike-assets "Invalid port: ~a" n)))]
+   [("-y" "--yes")
+    "Answer yes to any prompts."
+    (set! yes #t)]
+   [("-v" "--verbose")
+    "Show debug level logs"
+    (set! level 'debug)]
    #:once-any
    [("-s" "--server")
     "Start server"
-    (set! action start-server)]
+    (set! action run-server/wait)]
    [("-d" "--distribute")
     dir
     "Distribute files"

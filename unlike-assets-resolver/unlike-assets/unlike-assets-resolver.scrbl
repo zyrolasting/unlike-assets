@@ -224,13 +224,6 @@ values (cons (P key sym) (map (lambda (s) (P key s)) syms)))].}
 ]
 }
 
-@deftogether[(
-@defthing[asset/writes/c (asset/c [write (-> output-port? (or/c void? exact-nonnegative-integer?))])]
-@defthing[asset/reads/c  (asset/c [read (-> input-port? any/c)])]
-)]{
-These contracts match assets that include procedures to read or write information using ports.
-}
-
 @section{Global Resolver}
 @defmodule[unlike-assets/resolver/shared]
 
@@ -304,7 +297,14 @@ these abbreviations.
 }
 
 @defproc[(u/a [maybe-makers (-> string? u/a-build-system? (or/c #f live-build?))] ...) procedure?]{
-Extends @racket[current-key->live-build] with the given living build procedures.
+Imperatively extends @racket[current-key->live-build] with @racket[maybe-makers].
 
-The given procedures are consulted in the given order.
+@racket[maybe-makers] are consulted in the given order.
+}
+
+@deftogether[(
+@defthing[asset/with-write/c (asset/c [write (-> output-port? (or/c void? exact-nonnegative-integer?))])]
+@defthing[asset/with-read/c  (asset/c [read (-> input-port? any/c)])]
+)]{
+These contracts match assets that include procedures to read or write information using ports.
 }

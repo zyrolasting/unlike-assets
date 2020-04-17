@@ -8,6 +8,7 @@
          racket/contract
          racket/port
          racket/function
+         idiocket/file
          "files/contracts.rkt"
          "files/resolve.rkt")
 
@@ -15,10 +16,10 @@
  (all-from-out "files/contracts.rkt"
                "files/resolve.rkt")
  (contract-out
-  [static-files (-> (-> string? complete-path?)
-                    (-> complete-path? exact-integer? asset/file-to-file/c)
-                    ->live-build/c)]
-  [file-path->asset (-> complete-path? complete-path? bytes? asset/file-to-file/c)]
+  [static-files (->* ((-> complete-path? exact-integer? asset/file-to-file/c))
+                     #:rest (listof (or/c directory-exists? (-> string? complete-path?)))
+                     ->live-build/c)]
+  [file-path->asset (->* (complete-path? complete-path?) (bytes?) asset/file-to-file/c)]
   [make-cache-busting-file-name (-> file-exists? path?)]))
 
 (define default-media #"application/octet-stream")
@@ -35,14 +36,30 @@
       (λ (in) (copy-port in out))))
   (asset [input-file-path path]
          [output-file-path output-path]
-         [write-all-bytes copy]
+         [write copy]
          [->http-response
           (response/output #:mime-type mime-type copy)]))
+
+
+(define (make-key->path . search-dirs)
+  (λ (key)
+    (with-handlers ([exn:fail? (λ _ #f)])
+      (find-file-path key search-dirs #:must-exist #t))))
+
 
 ; Defines an extension that produces files named after their own content hashes.
 ; Useful for invalidating agressive web caches that would otherwise keep the
 ; same information forever.
-(define (static-files key->path on-new-file)
+(define (static-files on-new-file . maybe-key->paths)
+  (define key->paths
+    (map (λ (variant)
+           (if (or (path-string? variant)
+                   (path-for-some-system? variant))
+               (make-key->path variant)
+               variant))
+         maybe-key->paths))
+  (define (key->path key)
+    (ormap (λ (f) (f key)) key->paths))
   (λ (key recurse)
     (define path (key->path key))
     (and path

@@ -41,7 +41,8 @@
 (define (show-asset a)
   (respond/text
    (parameterize ([current-output-port (open-output-string)])
-     (pretty-print (a)))))
+     (pretty-print (a))
+     (get-output-string (current-output-port)))))
 
 (define (default-url->asset-key u)
   (string-join (map path/param-path (url-path u)) "/"))
@@ -51,7 +52,7 @@
    (λ (req)
      (with-handlers ([exn:fail? show-error])
        (define a (Ps (url->asset-key (request-uri req))))
-       (define respond (a '->http-response (λ (req) (show-asset a))))
+       (define respond (a '->http-response (λ () (λ (req) (show-asset a)))))
        (respond req)))))
 
 (define (start-server #:port [port 8080] [url->asset-key default-url->asset-key])

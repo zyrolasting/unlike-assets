@@ -31,7 +31,8 @@ can enforce reasonable constraints and maintain readable code.
                        [make-u/a-procure-procedure
                         (-> u/a-build-system? (->* (string?) #:rest (listof symbol?) any))]))
 
-(require racket/string
+(require racket/function
+         racket/string
          kinda-ferpy
          "model.rkt"
          (for-syntax racket/base
@@ -40,8 +41,10 @@ can enforce reasonable constraints and maintain readable code.
 (define (make-asset-contract #:allow-missing-keys? weak? pairings)
   (λ (maybe-matching)
     (and (andmap (λ (pair)
-                   (with-handlers ([exn:fail? (λ _ weak?)])
-                     ((cdr pair) (maybe-matching (car pair)))))
+                   (with-handlers ([(conjoin exn:fail? (negate exn:fail:contract?))
+                                    (λ _ weak?)])
+                     (with-contract asset/c #:result (cdr pair)
+                       (maybe-matching (car pair)))))
                  pairings)
      #t)))
 

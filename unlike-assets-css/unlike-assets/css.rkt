@@ -62,9 +62,6 @@
   (require racket/list
            racket/port)
 
-  (define (read+ in)
-    (read-syntax+ #f in))
-
   (define (read-syntax+ src in)
     (define content (port->list read in))
 

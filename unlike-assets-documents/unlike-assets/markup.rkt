@@ -1,13 +1,17 @@
 #lang racket/base
 
-; This is a version of scribble/doclang that does not
-; restrict values to document parts.
+; This is a version of scribble/doclang that does not restrict values
+; to document parts, and allows procedures within the body.
 
 (provide (except-out (all-from-out racket/base)
                      #%module-begin)
+         apply-in-list
+         format-document
          (rename-out [#%module-begin+ #%module-begin]))
 
 (require racket/syntax
+         (only-in "reformatting.rkt" format-document)
+         (only-in idiocket/list apply-in-list)
          (for-syntax racket/base
                      syntax/kerncase))
 
@@ -21,8 +25,8 @@
   (syntax-case stx ()
     [(_ exprs)
      #`(begin
-         (define --doc (format-document (list . #,(reverse (syntax->list #'exprs)))))
-         (define (render) (apply-in-list --doc))
+         (define doc (format-document (list . #,(reverse (syntax->list #'exprs)))))
+         (define (render) (apply-in-list doc))
          (provide render))]
     [(_ exprs . body)
      ;; Accumulate string literals from `body' to avoid trampolining on every one
@@ -59,5 +63,4 @@
                                               #%declare))))
                  #`(begin #,expanded (doc-begin exprs . body))]
                 [_else
-                 (writeln #'(doc-begin (body1 . exprs) . body))
                  #'(doc-begin (body1 . exprs) . body)])))]))]))

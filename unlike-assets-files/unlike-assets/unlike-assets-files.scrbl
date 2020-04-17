@@ -11,14 +11,14 @@
 @defmodule[unlike-assets/files]
 
 @racketmodname[unlike-assets/files] extends
-@racket[unlike-assets/resolver] to treat files as assets.
+@racketmodname[unlike-assets/resolver] to treat files as assets.
 
 @section{Asset Definitions}
-@defthing[asset/file-sourced/c (and/c (asset/c asset/readable/c [input-file-path complete-path?]))]{
+@defthing[asset/file-sourced/c (and/c (asset/c asset/with-read/c [input-file-path complete-path?]))]{
 Confirms if an asset can be read from a file system.
 }
 
-@defthing[asset/file-destined/c (and/c asset/writeable/c (asset/c [output-file-path complete-path?]))]{
+@defthing[asset/file-destined/c (and/c asset/with-write/c (asset/c [output-file-path complete-path?]))]{
 Confirms if an asset can be written to a file system.
 }
 
@@ -27,13 +27,12 @@ You get the idea.
 }
 
 @section{Resolving Filesystem Paths}
-
 @defmodule[unlike-assets/files/resolve]
 
-(define (find-file-path [#:must-exist must-exist boolean? #t]
-                        [p (or/c path-for-some-system? path-string?)])
-                        [search-dirs (non-empty-listof complete-path?) (list (current-directory))]
-                        (or/c #f complete-path?)]{
+@defproc[(find-file-path [#:must-exist must-exist boolean? #t]
+                         [p (or/c path-for-some-system? path-string?)]
+                         [search-dirs (non-empty-listof complete-path?) (list (current-directory))])
+                         (or/c #f complete-path?)]{
 If @racket[p] is complete, this returns @racket[p].  Otherwise, this
 returns the first path built from each directory in
 @racket[search-dirs] to refer to an existing file.
@@ -42,7 +41,6 @@ If no file is found, the result depends on @racket[must-exist].  If
 @racket[must-exist] is a true value, this will raise
 @racket[exn:fail:filesystem]. Otherwise, the result is @racket[#f].
 }
-
 
 @defproc[(procure/strong/relative-path-string [production-path complete-path?] [key string?]) string?]{
 Returns a relative path string that a file located at

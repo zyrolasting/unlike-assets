@@ -22,10 +22,10 @@
           [asset/with-write/c contract?]))
 
 (define asset/with-write/c
-  (asset/c [write (-> output-port? any)]))
+  (asset/c [write (-> output-port? (or/c void? exact-nonnegative-integer?))]))
 
 (define asset/with-read/c
-  (asset/c [read (-> input-port? any)]))
+  (asset/c [read (-> input-port? any/c)]))
 
 (define (in-assets [sys (current-u/a-build-system)] #:keep? [keep? (λ _ #t)])
   (sequence-filter (if (flat-contract? keep?) (flat-contract-predicate keep?) keep?)

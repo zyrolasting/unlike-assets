@@ -9,18 +9,18 @@
                     web-server/http/response-structs
                     web-server/dispatchers/dispatch
                     unlike-assets/resolver
-                    unlike-assets/server]]
+                    unlike-assets/projects/server]]
 
 @title{Project Definitions}
 
-@defmodule[unlike-assets/project]
+@defmodule[unlike-assets/projects]
 
-@racketmodname[unlike-assets/project] includes all bindings from
-@racketmodname[unlike-assets/project/server], @racketmodname[unlike-assets/project/cli],
-and @racketmodname[unlike-assets/project/distributor].
+@racketmodname[unlike-assets/projects] includes all bindings from
+@racketmodname[unlike-assets/projects/server], @racketmodname[unlike-assets/projects/cli],
+and @racketmodname[unlike-assets/projects/distributor].
 
 @section{Development Server}
-@defmodule[unlike-assets/project/server]
+@defmodule[unlike-assets/projects/server]
 
 This module helps you set up a server that forwards requests to the
 asset resolver.

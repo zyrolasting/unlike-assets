@@ -2,9 +2,11 @@
 
 (require (for-syntax racket/base)
          racket/runtime-path
-         unlike-assets/resolver)
+         unlike-assets/resolver
+         unlike-assets/projects/cli)
 
-(provide (all-from-out racket/base)
-         (for-syntax (all-from-out racket/base))
-         (all-from-out racket/runtime-path)
-         (all-from-out unlike-assets/resolver))
+(provide (for-syntax (all-from-out racket/base))
+         (all-from-out racket/base
+                       racket/runtime-path
+                       unlike-assets/resolver
+                       unlike-assets/projects/cli))

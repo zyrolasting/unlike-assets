@@ -1,4 +1,5 @@
 #lang info
 
 (define collection 'multi)
-(define deps '("base" "unlike-assets-resolver"))
+(define deps '("base"
+               "unlike-assets-resolver"))

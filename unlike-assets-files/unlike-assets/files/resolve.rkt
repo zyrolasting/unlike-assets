@@ -27,7 +27,7 @@
   key)
 
 (define-syntax-rule (define-relative-dependency-lookups dependent-path-expr)
-  (begin (define Ps& (curry procure/strong/relative-path-string dependent-path-expr))
+  (begin (define (Ps& k) (procure/strong/relative-path-string dependent-path-expr k))
          (define Pw& procure/weak/relative-path-string)))
 
 (define (local-file-url? str)

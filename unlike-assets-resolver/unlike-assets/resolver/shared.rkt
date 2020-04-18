@@ -56,7 +56,7 @@
   (void (map extend! ps)))
 
 (define (procure/weak key)
-  ((current-u/a-build-system) stateful-cell?))
+  ((current-u/a-build-system) key stateful-cell?))
 
 (define (procure/strong key . syms)
   (apply (make-u/a-procure-procedure (current-u/a-build-system))

@@ -28,7 +28,7 @@
   (asset/c [read (-> input-port? any/c)]))
 
 (define (in-assets [sys (current-u/a-build-system)] #:keep? [keep? (λ _ #t)])
-  (sequence-filter (if (flat-contract? keep?) (flat-contract-predicate keep?) keep?)
+  (sequence-filter keep?
                    (sequence-map (λ (living-build)
                                    (living-build asset?))
                                  (in-set (apply seteq (hash-values (sys)))))))

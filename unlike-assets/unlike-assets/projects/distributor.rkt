@@ -14,20 +14,25 @@
   [write-asset-to-filesystem!
    (->* (asset/with-write/c)
         (#:exists symbol? #:dry-run? any/c)
-        exact-positive-integer?)]
+        (or/c exact-nonnegative-integer? void?))]
    [write-resolved-to-filesystem!
     (->* ()
          (u/a-build-system?
           #:exists symbol?
           #:dry-run? any/c)
-         (hash/c complete-path? exact-positive-integer?))]
-   [sync-filesystem-to-resolved! (->* () (u/a-build-system?) void?)]))
+         (hash/c complete-path? (or/c exact-nonnegative-integer? void?)))]
+   [sync-filesystem-to-resolved!
+    (->* ()
+         (u/a-build-system?
+          #:dry-run? any/c)
+         void?)]))
 
 (define/under-policy (write-asset-to-filesystem! a #:exists [exists 'error])
   (define dst (a 'output-file-path))
+  (log-info "Saving asset: ~a" dst)
   (make-parent-directory* dst)
   (call-with-output-file #:exists exists
-    dst (a 'write-bytes)))
+    dst (a 'write)))
 
 (define/under-policy (write-resolved-to-filesystem! [sys (current-u/a-build-system)] #:exists [exists 'error])
   (for/fold ([written #hash()])
@@ -42,9 +47,12 @@
   (define predators (apply set files-written))
   (define habitat
     (apply set
-           (map (λ (path)
-                  (directory-list (path-only path)
-                                  #:build? #t))
-                files-written)))
+           (apply append
+                  (map (λ (path)
+                         (directory-list (path-only path)
+                                         #:build? #t))
+                       files-written))))
+
   (define prey (set-subtract habitat predators))
-  (sequence-for-each delete-file (in-set prey)))
+  (sequence-for-each (λ (p) (dry (delete-file p)))
+                     (in-set prey)))

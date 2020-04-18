@@ -1,26 +1,28 @@
 #lang racket/base
 
-(provide define/under-policy)
+(provide define/under-policy
+         dry
+         (struct-out exn:dry-run))
 (require racket/function
+         racket/format
          racket/set
          racket/string)
 
 (struct exn:dry-run ())
-
 (define default-dry-run (make-parameter #t))
 
 (define (log-file-operation #:level level procedure-symbol path-or-false meta)
   (log-message (current-logger)
-               'debug
-               'unlike-assets/files
-               (format "file op: '(~a) ~a => ~a"
-                       (string-join meta " ")
+               level
+               'unlike-assets
+               (format "~a => ~a"
                        procedure-symbol
                        path-or-false)
                (vector procedure-symbol
                        path-or-false
                        meta
-                       (current-continuation-marks))))
+                       (current-continuation-marks))
+               #t))
 
 (define (make-checker meta)
   (define intentions (list->set meta))
@@ -32,17 +34,21 @@
                          (log-file-operation #:level (if dry-run? 'info 'debug)
                                              procedure-symbol path-or-false meta)
                          (define intended? (make-checker meta))
-                         (cond [(and dry-run? (intended? 'write 'delete))
-                                (raise (exn:dry-run))]
+                         (cond [(intended? 'write 'delete)
+                                (when dry-run? (raise (exn:dry-run)))]
                                [(intended? 'execute)
                                 (error "No file executions permitted when saving files.")]
                                [(intended? 'read 'exists)
                                 (void)]
                                [else (error 'make-file-i/o-policy
                                             "Incomplete security policy over effects: ~a"
-                                            meta)])
+                                            meta)]))
                        (λ _ (error "No network access permitted for file I/O section."))
-                       #f)))
+                       #f))
+
+
+(define-syntax-rule (dry body ...)
+  (with-handlers ([exn:dry-run? void]) body ...))
 
 (define-syntax-rule (define/under-policy (sig ...) body ...)
   (define (sig ... #:dry-run? [dry-run? (default-dry-run)])

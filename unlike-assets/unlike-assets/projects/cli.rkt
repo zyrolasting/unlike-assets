@@ -14,6 +14,7 @@
   (define port 8080)
   (define level 'info)
   (define yes #f)
+  (define-logger unlike-assets)
 
   (define (run-server/wait)
     (printf "Listening on port ~a~n" port)
@@ -25,8 +26,9 @@
 
   (define (confirm prompt)
     (or yes
-        (let loop ()
+        (begin
           (printf "~a [y/N]: " prompt)
+          (flush-output)
           (case (read-char)
             [(#\y #\Y) #t]
             [else #f]))))
@@ -58,21 +60,24 @@
     "Start server"
     (set! action run-server/wait)]
    [("-d" "--distribute")
-    dir
     "Distribute files"
     (begin
       (displayln "WARNING: Distributing files is a destructive operation.")
       (displayln "By default, this will perform a dry run.")
-      (define dry-run? (confirm "Disable the dry run and distribute the files?"))
-      (displayln "You can disable this prompt in the future with --yes.")
+      (displayln "(You can disable this prompt in the future with --yes)")
+      (define disable-dry-run? (confirm "Disable the dry run and distribute the files?"))
       (set! action
-            (λ () (sync-filesystem-to-resolved! #:dry-run? dry-run?))))]
+            (λ () (sync-filesystem-to-resolved! #:dry-run? (not disable-dry-run?)))))]
     #:args keys
     (with-logging-to-port
       (current-output-port)
       (λ ()
-        (with-handlers ([exn:break? (λ _ (displayln "User break"))])
-          (map Pw keys)
-          (action)))
-      #:logger (current-logger)
-      level 'unlike-assets)))
+        (void (with-handlers ([exn:break? (λ _ (displayln "User break"))])
+                (log-unlike-assets-info "Requesting ~a asset(s)" (length keys))
+                (map Pw keys)
+                (for ([k (in-list keys)])
+                  (Ps k)
+                  (log-unlike-assets-info "Procured ~a" k))
+                (action))))
+      #:logger unlike-assets-logger
+      level)))

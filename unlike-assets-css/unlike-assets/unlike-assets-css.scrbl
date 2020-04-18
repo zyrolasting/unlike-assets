@@ -7,18 +7,20 @@
 
 This module produces CSS stylesheets as living assets.
 
-@section{Racket-CSS Hybrid Language}
-When used as a @litchar{#lang}, @racketmodname[unlike-assets/css]
-reads a section of Racket code followed by a section of CSS
-Expressions as per @racketmodname[css-expr]. All style declarations
-are accumulated, then provided as a minified string.
+@section{Racket-CSS Pidgin Language}
+@defmodule[unlike-assets/css/pidgin #:lang]
+
+When used as a @litchar{#lang},
+@racketmodname[unlike-assets/css/pidgin] reads a section of Racket
+code followed by a section of CSS Expressions as per
+@racketmodname[css-expr]. All style declarations are accumulated, then
+provided as a minified string.
 
 The Racket section has all of the bindings from
 @racketmodname[racket/base], @racketmodname[unlike-assets/css], and
 @racketmodname[css-expr] available for use.
 
 @racketmod[unlike-assets/css
-
 (code:comment "You can write racket/base code normally")
 (require racket/format)
 

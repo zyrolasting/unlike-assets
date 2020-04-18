@@ -20,15 +20,16 @@
                      #:rest (listof (or/c directory-exists? (-> string? complete-path?)))
                      ->live-build/c)]
   [file-path->asset (->* (complete-path? complete-path?) (bytes?) asset/file-to-file/c)]
-  [make-cache-busting-file-name (-> file-exists? path?)]))
+  [make-cache-busting-file-name (->* (file-exists?) ((or/c input-port? #f)) path?)]))
 
 (define default-media #"application/octet-stream")
 
-(define (make-cache-busting-file-name file-path)
-  (call-with-input-file file-path
-    (λ (port)
+(define (make-cache-busting-file-name file-path [port #f])
+  (if (input-port? port)
       (path-replace-extension (substring (sha1 port) 0 8)
-                              (path-get-extension file-path)))))
+                              (path-get-extension file-path))
+      (call-with-input-file file-path
+        (λ (port) (make-cache-busting-file-name file-path port)))))
 
 (define (file-path->asset path output-path [mime-type default-media])
   (define (copy out)

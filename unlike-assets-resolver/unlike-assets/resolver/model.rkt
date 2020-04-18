@@ -17,9 +17,9 @@
 (define ->live-build/c
   (-> string? u/a-build-system? (or/c #f live-build?)))
 
-(define (<log level event target)
+(define (<log event target)
   (log-message (current-logger)
-               level
+               'debug
                'unlike-assets
                (format "~a: ~a" event target)
                target))
@@ -31,11 +31,11 @@
     (make-stateful-cell/async
      #:dependencies (list %signal)
      (λ ()
-       (<log 'info "UPDATE" key)
+       (<log "UPDATE" key)
        (build! (%signal)))))
   (make-live-build-proc
    (λ ([stop? stateful-cell?])
-     (<log 'debug "SIGNAL" key)
+     (<log "SIGNAL" key)
      (define next (sample!))
      (unless (suppress? (%signal) next)
        (%signal next))

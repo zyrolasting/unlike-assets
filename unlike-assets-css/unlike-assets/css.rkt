@@ -3,10 +3,15 @@
 (provide (all-defined-out)
          (all-from-out css-expr))
 
-(require racket/string
+(require racket/file
+         racket/function
+         racket/path
+         racket/string
          css-expr
          unlike-assets/resolver
-         unlike-assets/files)
+         unlike-assets/racket-modules
+         unlike-assets/files
+         web-server/http/response-structs)
 
 (define (make-style-accumulator)
   (let ([decls '()])
@@ -17,10 +22,44 @@
 (define (discard-meaningless-semicolons css-str)
   (regexp-replace* #px";\\s*\\}" css-str "}"))
 
-(define (make-stylesheet input-path css)
+(define (make-stylesheet input-path output-dir css)
+  (define (write-css o)
+    (write-bytes (string->bytes/utf-8 css)))
   (asset [input-file-path input-path]
-         [output-file-name (make-cache-busting-file-name input-path (open-input-string css))]
-         [write (λ (o) (write-bytes (string->bytes/utf-8 css)))]))
+         [output-file-path
+          (build-path output-dir
+                      (make-cache-busting-file-name input-path
+                                                    (open-input-string css)))]
+         [write write-css]
+         [->http-response
+          (λ (req)
+            (response/output #:code 200
+                             #:mime-type #"text/css; charset=utf-8"
+                             write-css))]))
+
+(define (css-modules input-directory output-directory)
+  (disjoin (racket-modules (λ (key)
+                             (define modpath (simplify-path (build-path output-directory key)))
+                             (and (file-exists? modpath)
+                                  (equal? (path-get-extension modpath) #".rkt")
+                                  (let ([get-info (call-with-input-file modpath read-language)])
+                                    (and get-info
+                                         (member #"text/css"
+                                                 (get-info 'unlike-assets:supported-media-types))))))
+                           (λ (modpath)
+                             (make-stylesheet modpath output-directory
+                                              (dynamic-require modpath 'css))))
+           (static-files (λ (file-path mtime)
+                           (make-stylesheet file-path output-directory
+                                            (file->string file-path)))
+                         (λ (key)
+                           (define maybe-css-file
+                             (if (complete-path? key)
+                                 key
+                                 (build-path input-directory key)))
+                           (and (equal? (path-get-extension maybe-css-file) #".css")
+                                (file-exists? maybe-css-file)
+                                maybe-css-file)))))
 
 (define (maybe-add-suffix str suff)
   (if (string-suffix? str suff)

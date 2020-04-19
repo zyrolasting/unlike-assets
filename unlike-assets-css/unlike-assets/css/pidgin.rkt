@@ -1,8 +1,19 @@
 #lang racket/base
 
 (module reader racket/base
-  (provide (rename-out [read-syntax+ read-syntax] [read+ read]))
-  (require racket/list racket/function racket/port syntax/strip-context)
+  (provide (rename-out [read-syntax+ read-syntax] [read+ read])
+           get-info)
+
+  (require racket/list
+           racket/function
+           racket/port
+           syntax/strip-context)
+
+  (define (get-info in modpath line col pos)
+    (λ (key default)
+      (case key
+        [(unlike-assets:semantic-type) 'css]
+        [else #f])))
 
   (define (read+ in)
     (syntax->datum (read-syntax+ #f in)))

@@ -27,6 +27,7 @@
 
 (define default-media #"application/octet-stream")
 
+; Derives a file's name from it's own content.
 (define (make-cache-busting-file-name file-path [port #f])
   (if (input-port? port)
       (path-replace-extension (substring (sha1 port) 0 8)
@@ -51,9 +52,6 @@
       (find-file-path key search-dirs #:must-exist #t))))
 
 
-; Defines an extension that produces files named after their own content hashes.
-; Useful for invalidating agressive web caches that would otherwise keep the
-; same information forever.
 (define (static-files on-new-file . maybe-key->paths)
   (define key->paths
     (map (λ (variant)

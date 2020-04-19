@@ -17,7 +17,10 @@
                "files/resolve.rkt")
  (contract-out
   [static-files (->* ((-> complete-path? exact-integer? asset/file-to-file/c))
-                     #:rest (listof (or/c directory-exists? (-> string? complete-path?)))
+                     #:rest (listof (or/c (and/c path-string?
+                                                 path-for-some-system?
+                                                 directory-exists?)
+                                          (-> string? complete-path?)))
                      ->live-build/c)]
   [file-path->asset (->* (complete-path? complete-path?) (bytes?) asset/file-to-file/c)]
   [make-cache-busting-file-name (->* (file-exists?) ((or/c input-port? #f)) path?)]))

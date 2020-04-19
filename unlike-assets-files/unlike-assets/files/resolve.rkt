@@ -20,7 +20,7 @@
                  (with-contract procure/strong/relative-path-string
                    #:result complete-path?
                    #:freevars ([Ps (-> string? asset/file-destined/c)])
-                   ((Ps key) 'output-path)))))
+                   ((Ps key) 'output-file-path)))))
 
 (define (procure/weak/relative-path-string key)
   (Pw key)

@@ -7,6 +7,7 @@
                      #%module-begin)
          apply-in-list
          format-document
+         #%top-interaction
          (rename-out [#%module-begin+ #%module-begin]))
 
 (require racket/syntax
@@ -17,8 +18,10 @@
 
 (define-syntax (#%module-begin+ stx)
   (syntax-case stx ()
-    [(_ . body)
+    [(_ src . body)
      #'(#%module-begin
+        (define input-file-path src)
+        (provide input-file-path)
         (doc-begin () . body))]))
 
 (define-syntax (doc-begin stx)

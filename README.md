@@ -9,14 +9,10 @@ Imagine if Racket allowed this:
 (dynamic-require "/path/to/script.js" 'minified)
 ```
 
-That's what `unlike-assets` does.
-
-## Okay, I'm Listening.
-`unlike-assets` is a bit like Webpack, except leaner and powered by
-Racket. It ships with a configurable module resolver for non-Racket
-ecosystems. Under this light, an SVG document, a CSS stylesheet, an
-SPIR-V shader, or a tarball are importable objects that are never out
-of date.
+That's what `unlike-assets` does. It ships with a configurable module
+resolver for non-Racket ecosystems. Under this light, an SVG document,
+a CSS stylesheet, an SPIR-V shader, or a tarball are importable
+objects that are never out of date.
 
 Let's say you reference a stylesheet using one of the _procure_
 functions provided by this project:
@@ -59,7 +55,7 @@ Once the defaults no longer suffice, you will need to install
 the packages relevant to you.
 
 ## WTF is with this filesystem?
-**Short answer**: Racket made me do it. Read the docs.
+**Short answer**: Racket made me do it.
 
 **Long answer:** Racket's module resolver thinks of _packages_ and
 _collections_ as two different things. If you come from JavaScript or
@@ -72,18 +68,11 @@ In Racket, a collection is a logical grouping of modules. Packages
 `unlike-assets` collection so you can write `(require
 unlike-assets/css)`.
 
-Racket (more specifically `raco`) has file conventions for this
-workflow. This is why you see a bunch of nested directories with the
-same names, and files with different names for the same role.
-
-
-## Optional Reading: Project Vision
-My hope is to lower the barrier between Racket programmers and
-incompatible technologies. By making other ecosystems act as if they
-were part of Racket's module system, you can unlock massive creative
-control over programming projects. I believe this is the shortest
-path between Racket's ability to swap notations and the features
-that cost too much to implement in pure Racket.
+Racket and it's package manager `raco` have file conventions for this
+reason and others I don't mention. This is why you see a bunch of
+nested directories with the same names, and files with different names
+for the same role. I'll probably end up writing a tutorial for that at
+some point.
 
 
 ## Contributing

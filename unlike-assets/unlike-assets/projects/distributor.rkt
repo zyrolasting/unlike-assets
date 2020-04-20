@@ -12,18 +12,18 @@
 (provide
  (contract-out
   [write-asset-to-filesystem!
-   (->* (asset/with-write/c)
+   (->* (asset/file-destined/c)
         (#:exists symbol? #:dry-run? any/c)
         (or/c exact-nonnegative-integer? void?))]
    [write-resolved-to-filesystem!
     (->* ()
-         (u/a-build-system?
+         (resolver?
           #:exists symbol?
           #:dry-run? any/c)
          (hash/c complete-path? (or/c exact-nonnegative-integer? void?)))]
    [sync-filesystem-to-resolved!
     (->* ()
-         (u/a-build-system?
+         (resolver?
           #:dry-run? any/c)
          void?)]))
 
@@ -32,16 +32,16 @@
   (log-info "Saving asset: ~a" dst)
   (make-parent-directory* dst)
   (call-with-output-file #:exists exists
-    dst (a 'write)))
+    dst (a 'write-file)))
 
-(define/under-policy (write-resolved-to-filesystem! [sys (current-u/a-build-system)] #:exists [exists 'error])
+(define/under-policy (write-resolved-to-filesystem! [sys (current-resolver)] #:exists [exists 'error])
   (for/fold ([written #hash()])
             ([a (in-assets #:keep? asset/file-destined/c)])
     (hash-set written
               (a 'output-file-path)
               (write-asset-to-filesystem! a #:exists exists))))
 
-(define/under-policy (sync-filesystem-to-resolved! [sys (current-u/a-build-system)])
+(define/under-policy (sync-filesystem-to-resolved! [sys (current-resolver)])
   (define written (write-resolved-to-filesystem! sys #:exists 'truncate/replace))
   (define files-written (hash-keys written))
   (define predators (apply set files-written))

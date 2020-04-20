@@ -16,12 +16,12 @@
  (all-from-out "files/contracts.rkt"
                "files/resolve.rkt")
  (contract-out
-  [static-files (->* ((-> complete-path? exact-integer? asset/file-to-file/c))
-                     #:rest (listof (or/c (and/c path-string?
-                                                 path-for-some-system?
-                                                 directory-exists?)
-                                          (-> string? complete-path?)))
-                     ->live-build/c)]
+  [static-files (->* ((-> complete-path? exact-integer? asset/file-to-file/c)
+                      (or/c (listof (and/c path-string?
+                                           path-for-some-system?
+                                           directory-exists?))
+                            (-> string? (or/c #f complete-path?))))
+                     route/c)]
   [file-path->asset (->* (complete-path? complete-path?) (bytes?) asset/file-to-file/c)]
   [make-cache-busting-file-name (->* (file-exists?) ((or/c input-port? #f)) path?)]))
 
@@ -41,34 +41,19 @@
       (λ (in) (copy-port in out))))
   (asset [input-file-path path]
          [output-file-path output-path]
-         [write copy]
+         [write-file copy]
          [->http-response
           (response/output #:mime-type mime-type copy)]))
 
-
-(define (make-key->path . search-dirs)
-  (λ (key)
-    (with-handlers ([exn:fail? (λ _ #f)])
-      (find-file-path key search-dirs #:must-exist #t))))
-
-
-(define (static-files on-new-file . maybe-key->paths)
-  (define key->paths
-    (map (λ (variant)
-           (if (or (path-string? variant)
-                   (path-for-some-system? variant))
-               (make-key->path variant)
-               variant))
-         maybe-key->paths))
-  (define (key->path key)
-    (ormap (λ (f) (f key)) key->paths))
+(define (static-files on-new-file variant)
+  (define key->path
+    (if (procedure? variant)
+        variant
+        (λ (key)
+          (find-file-path key variant #:must-exist #f))))
   (λ (key recurse)
     (define path (key->path key))
     (and path
          (file-exists? path)
-         (start-live-build! key
-                            #:suppress? equal?
-                            #:sample!
-                            (λ () (file-or-directory-modify-seconds path))
-                            #:build!
-                            (λ (mtime) (on-new-file path mtime))))))
+         (pod mtime <- (file-or-directory-modify-seconds path)
+              (on-new-file path mtime)))))

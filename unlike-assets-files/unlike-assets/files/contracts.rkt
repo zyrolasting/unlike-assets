@@ -8,8 +8,8 @@
   (asset/c [input-file-path complete-path?]))
 
 (define asset/file-destined/c
-  (and/c asset/with-write/c
-         (asset/c [output-file-path complete-path?])))
+  (asset/c [output-file-path complete-path?]
+           [write-file (-> output-port? (or/c void? exact-nonnegative-integer?))]))
 
 (define asset/file-to-file/c
   (and/c asset/file-sourced/c

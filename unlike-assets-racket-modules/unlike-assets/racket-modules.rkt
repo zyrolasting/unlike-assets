@@ -8,7 +8,10 @@
          unlike-assets/resolver)
 
 (define module-path/c
-  (or/c module-path? resolved-module-path? module-path-index?))
+  (or/c path-for-some-system?
+        module-path?
+        resolved-module-path?
+        module-path-index?))
 
 (provide
  module-path/c
@@ -16,7 +19,7 @@
   [make-asset-from-provides (-> module-path/c asset?)]
   [racket-modules (->* ((or/c path-for-some-system?
                               path-string?
-                              (-> string? (or/c module-path/c #f))))
+                              (-> string? (or/c path-string? module-path/c #f))))
                        ((-> module-path/c asset?))
                        procedure?)]))
 
@@ -33,7 +36,11 @@
           (raise-argument-error 'racket-modules
                                 "A path to an existing directory"
                                 v))
-  v))
+      (λ (key)
+        (define modpath (v key))
+        (if (string? modpath)
+            (string->path modpath)
+            modpath))))
 
 (define (make-asset-from-provides module-path)
   (dynamic-require module-path (void))

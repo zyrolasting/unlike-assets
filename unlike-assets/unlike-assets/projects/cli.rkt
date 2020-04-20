@@ -80,4 +80,5 @@
                   (log-unlike-assets-info "Procured ~a" k))
                 (action))))
       #:logger unlike-assets-logger
-      level)))
+      level
+      'unlike-assets)))

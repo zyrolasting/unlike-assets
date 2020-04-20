@@ -3,6 +3,7 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/function
+                    racket/match
                     racket/rerequire
                     kinda-ferpy
                     unlike-assets/resolver]]
@@ -253,4 +254,18 @@ Creates a contract that captures individual values in an asset.
 @racketblock[
 (asset/c [media-type bytes?]
          [writer (-> output-port? any)])]
+}
+
+@defform[(asset/p id ...)]{
+A @racket[match] pattern for assets, @italic{not} the hashes they
+decorate. You do not have to list every key for an asset, but every key
+you list must exist in the asset's hash for the pattern to match.
+
+@racketblock[
+(match-define (asset/p flavor) (asset [flavor 'chocolate] [kind 'ice-cream]))
+(eq? flavor 'chocolate)
+
+(match-define (asset/p vendor) (asset [flavor 'chocolate] [kind 'ice-cream]))
+(code:comment "match-define: no matching clause for #<procedure:asset>")
+]
 }

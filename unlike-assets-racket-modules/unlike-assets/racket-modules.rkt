@@ -55,7 +55,5 @@
   (λ (key recurse)
     (let ([module-path (normalized key)])
       (and module-path
-           (start-live-build! key
-                              #:sample! (λ () (dynamic-rerequire module-path #:verbosity 'none))
-                              #:build! (λ _ (make-asset module-path))
-                              #:suppress? (λ (a b) (null? b)))))))
+           (pod [(λ (a b) (null? b)) _ <- (dynamic-rerequire module-path #:verbosity 'none)]
+                (make-asset module-path))))))

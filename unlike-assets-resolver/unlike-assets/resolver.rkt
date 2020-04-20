@@ -1,8 +1,10 @@
 #lang racket/base
 
-(require "resolver/model.rkt"
-         "resolver/assets.rkt"
-         "resolver/shared.rkt")
-(provide (all-from-out "resolver/model.rkt")
-         (all-from-out "resolver/assets.rkt")
-         (all-from-out "resolver/shared.rkt"))
+(require "resolver/base.rkt"
+         "resolver/pod.rkt"
+         "resolver/asset.rkt"
+         "resolver/global.rkt")
+(provide (all-from-out "resolver/base.rkt")
+         (all-from-out "resolver/pod.rkt")
+         (all-from-out "resolver/asset.rkt")
+         (all-from-out "resolver/global.rkt"))

@@ -4,16 +4,22 @@
          idiocket/function
          racket/set
          racket/sequence
+         racket/string
          "pod.rkt")
 
 (provide
  route/c
+ (struct-out exn:fail:unlike-assets:cycle)
+ make-exn:fail:unlike-assets:cycle
  (contract-out
   [resolver? predicate/c]
   [make-resolver
    (->* () (#:known (hash/c string? pod?)) #:rest (non-empty-listof route/c) resolver?)]
   [invert-found (-> resolver? (hash/c pod? (non-empty-listof string?) #:immutable #t))]
   [in-found (->* (resolver? predicate/c) ((-> pod? (non-empty-listof string?) any/c)) sequence?)]))
+
+(define-struct (exn:fail:unlike-assets:cycle exn:fail)
+  (dependency-key dependents))
 
 (define-values (make-resolver-proc resolver?) (of-name "resolver"))
 (define route/c (-> string? resolver? (or/c #f pod?)))
@@ -40,8 +46,17 @@
         (hash-set! known (make-alias key val) (R key))
         val])))
   (define (pod-ref key)
-    (when (continuation-mark-set-first (current-continuation-marks) key)
-      (error "cycle in loading for ~a" key))
+    (define dependents (continuation-mark-set-first (current-continuation-marks) 'dependent-pods))
+    (when (and (list? dependents) (member key dependents))
+      (raise (exn:fail:unlike-assets:cycle
+              (format "cycle in loading for ~a~ndependents:~n~a"
+                      key
+                      (string-join
+                       (map (λ (v) (format "  ~a" v)) dependents)
+                       "\n"))
+              (current-continuation-marks)
+              key
+              dependents)))
     (unless (hash-has-key? known key)
       (hash-set! known key (key->pod key R)))
     (hash-ref known key))
@@ -87,6 +102,13 @@
     (sys "a")
     (check-true (hash-has-key? (sys) "a")
                 (pod? (hash-ref (sys) "a"))))
+
+  (test-case "Can detect cycles"
+    (define sys (make-resolver (λ (key _) (pod key (sys key)))))
+    (check-exn (λ (e) (and (exn:fail:unlike-assets:cycle? e)
+                           (equal? (exn:fail:unlike-assets:cycle-dependency-key e) "a")
+                           (equal? (exn:fail:unlike-assets:cycle-dependents e) '("a"))))
+               (λ () (sys "a" (negate procedure?)))))
 
   (test-case "Can alias keys based on pod values"
     (define sys (make-resolver key->key-build))

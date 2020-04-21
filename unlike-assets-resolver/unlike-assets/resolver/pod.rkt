@@ -34,6 +34,12 @@
   (define result undefined)
   (define raised #f)
 
+  (define (add-dependent)
+    (cons key (or (continuation-mark-set-first
+                   (current-continuation-marks)
+                   'dependent-pods)
+                  null)))
+
   (define (on-finish res)
     (set! result res)
     (set! raised #f))
@@ -42,17 +48,17 @@
     (set! result res)
     (set! raised #t))
 
-  (define (main)
-    (with-continuation-mark key #t
+  (define (main mark)
+    (with-continuation-mark 'dependent-pods mark
       (with-handlers ([(const #t) on-raised])
         (on-finish (build)))))
 
-  (define (provision)
+  (define (provision mark)
     (set! build (make-build))
     (when build
       (when (thread? worker)
         (break-thread worker))
-      (set! worker (thread main))))
+      (set! worker (thread (λ () (main mark))))))
 
   (define (wait-for-result)
     (when (thread? worker)
@@ -63,7 +69,7 @@
 
   (make-pod-proc
    (λ ()
-     (provision)
+     (provision (add-dependent))
      wait-for-result)))
 
 (module+ test
@@ -84,10 +90,21 @@
     (define p (test-podλ (const 1)))
     (check-eq? 1 ((p))))
 
-  (test-case "A pod's key is bound to #t in continuation marks"
-    (define key "whatever")
-    (define p (make-pod key (const (λ () (continuation-mark-set-first (current-continuation-marks) key)))))
-    (check-true ((p))))
+  (test-case "Pods can be traced"
+    (define p
+      (make-pod "p"
+                (const (λ ()
+                         (continuation-mark-set-first (current-continuation-marks)
+                                                      'dependent-pods)))))
+
+    ; The pods must provision a thread in the dynamic extent of a
+    ; procedure returned by another pod's make-build. Otherwise the
+    ; dependency relationship won't be tracked.
+    (define a (make-pod "a" (const (λ () ((p))))))
+    (define b (make-pod "b" (const (λ () ((a))))))
+    (define c (make-pod "c" (const (λ () ((b))))))
+
+    (check-equal? ((c)) '("p" "a" "b" "c")))
 
   (test-case "A pod's wait procedure will always return the latest value"
     (define calls 0)

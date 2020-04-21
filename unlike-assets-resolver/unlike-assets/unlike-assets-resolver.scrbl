@@ -87,7 +87,8 @@ existing resolver.
 @section{@tt{unlike-assets/resolver/base}}
 @defmodule[unlike-assets/resolver/base]
 
-A resolver maps strings to @tech{pods}. Pods may use the same resolver,
+A resolver maps strings to @tech{pods}. Pods may use the same
+resolver to depend on other pods.
 
 @defproc[(resolver? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] came from @racket[make-resolver].
@@ -104,24 +105,40 @@ of @racket[known].
 @racket[R]'s behavior depends on the number of provided arguments:
 
 @itemlist[
-@item{@racket[(R)] evaluates to a hash of string keys and @tech{pod} values.}
+@item{@racket[(R)] returns a copy of the internal hash.}
 
-@item{@racket[(R key)] will return @racket[(hash-ref (R) key)], or
-raise @racket[exn:fail] if @racket[(current-continuation-marks)] maps
-@racket[key] to @racket[#t]. If the key does not map to a pod, then
-the pod will be created using the first @racket[(find-pod key R)] to
-return a pod value. @racket[R] may be invoked recursively in any
+@item{@racket[(R key)] will return @racket[(hash-ref internal-hash
+key)], or raise @racket[exn:fail:unlike-assets:cycle] if using the
+referenced pod would create a cycle. If the key does not map to a pod,
+then the key will be set to the first @racket[(find-pod key R)] to
+return a pod. @racket[R] may be invoked recursively in any
 @racket[find-pod].}
 
-@item{@racket[(R key return?)]: Returns @racket[(or (return? P)
-(return? (P) ...))], where @racket[P] is @racket[(R key)]. Useful for
-finding a common value type.}
+@item{@racket[(R key return?)]: Returns @racket[(or (return? P) (return? (P) ...))],
+where @racket[P] is the @tech{pod} returned from @racket[(R key)]. Useful for
+finding a common value type. Remember that due to the nature of pods, @racket[(R key return?)]
+is non-deterministic.
+}
 
 @item{@racket[(R key return? make-alias)]: Like @racket[(R key
 return?)].  As a side effect, it adds a key equal to
 @racket[(make-alias key (R key return?))] to the internal hash table.
 Useful for finding pods based on values they produced.}
 ]
+}
+
+@defstruct[exn:fail:unlike-assets:cycle ([dependency-key string?] [dependent-keys (listof string)])]{
+An error raised when the resolver encounters a cycle.
+
+@racket[dependency-key] is the string key used to resolve a pod that exists in @racket[dependent-keys].
+
+@racket[dependent-keys] is the list of keys used to resolve pods
+leading up to @racket[dependency-key].
+
+The pod with the first key in @racket[dependent-keys] is dependent on
+the pod with the @racket[dependency-key]. Beyond that, the pod with
+the @racket[N]th key in @racket[dependent-keys] is dependent on the
+pod with the @racket[N-1]th key.
 }
 
 @defproc[(invert-found [R resolver?]) (hash/c pod? (non-empty-listof string?) #:immutable #t)]{
@@ -136,12 +153,16 @@ of keys used to refer to the respective pod.
                    (const #t)]) sequence?]{
 Returns a two-value sequence filtered by @racket[keep?].
 
-The first value is a pod @racket[P], if @racket[(return? P)] is true.
-Otherwise, it's @racket[(P return?)].
+The first value is equal to @racket[(R key return?)].
+The second value is a list of all keys that can be used to
+access the first value using @racket[R].
 
-The second value is a list of all keys that can be used to access the
-value in @racket[R]'s managed hash.
+If @racket[return?] is @racket[pod?], then @racket[(R key)] is
+@racket[eq?] to the first sequence value for each @racket[key] in the second.
+Therefore, @racket[(in-found R pod? (const #t))] is equivalent to
+@racket[(in-hash (invert-found (R)))].
 }
+
 
 
 @section{@tt{unlike-assets/resolver/pod}}
@@ -177,8 +198,10 @@ procedure to use to create a singular Racket value.
 If @racket[make-build] returns a procedure, then @racket[build!] will
 run the returned procedure in a new thread.  If a thread is already
 running for the pod, then that thread will be sent a break before
-being replaced. A continuation mark for @racket[key] is set to
-@racket[#t] in the dynamic extent of a pod's thread.
+being replaced. A continuation mark with key @racket['dependent-pods]
+will be set in the dynamic extent of a pod's thread. If @racket['dependent-pods]
+is not mapped to a value, it will be set to @racket[(list key)]. Otherwise,
+it will be set to @racket[(cons key existing-value)].
 
 If @racket[make-build] returns @racket[#f], then @racket[build!] has no
 side-effects. Specifically, @racket[(build!)] will still return a wait
@@ -321,9 +344,9 @@ Fence thunks detect change. While fence thunks cooperate well with
 @racket[make-pod/fence], you can use them to test if you should react
 to some external circumstance.
 
-Fence thunks often use side-effects in the context of the
-@racketmodname[unlike-assets] collection, and they can consider raised
-values as a sign of change as opposed to a reason to halt a program.
+Fence thunks are meant to track the impact of side-effects. They can
+consider raised values as a sign of change as opposed to a reason to
+halt a program, which is relevant for managing pods.
 
 @defform[(fence body ...)]{
 Expands to:

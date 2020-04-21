@@ -50,9 +50,9 @@
   (define-values (ids ...) (procure key 'ids ...)))
 
 (define (procure/weak key)
-  (define p ((current-resolver) key))
-  (p)
-  p)
+  (define r (current-resolver))
+  (define p (r key))
+  (λ () (r key asset?)))
 
 (module+ test
   (require rackunit)

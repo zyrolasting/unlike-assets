@@ -24,7 +24,7 @@ name.  That procedure can identify dependencies of your asset and add
 them to the graph. So if you process an HTML file, then you can find
 dependencies in that file and queue them up for further processing.
 
-If an asset changes, you can also control how that change propogates
+If an asset changes, you can also control how that change propagates
 to other assets.
 
 @deftogether[(

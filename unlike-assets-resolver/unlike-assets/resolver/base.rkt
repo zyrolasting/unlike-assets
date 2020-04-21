@@ -11,7 +11,7 @@
  (contract-out
   [resolver? predicate/c]
   [make-resolver
-   (->* () ((and/c hash? (not/c immutable?))) #:rest (non-empty-listof route/c) resolver?)]
+   (->* () (#:known (hash/c string? pod?)) #:rest (non-empty-listof route/c) resolver?)]
   [invert-found (-> resolver? (hash/c pod? (non-empty-listof string?) #:immutable #t))]
   [in-found (->* (resolver? predicate/c) ((-> pod? (non-empty-listof string?) any/c)) sequence?)]))
 
@@ -25,20 +25,23 @@
         (or ((car ps) k r)
             (apply aggregate-routes (cdr ps))))))
 
-(define (make-resolver [known (make-hash)] . ps)
+(define (make-resolver #:known [table #hash()] . ps)
+  (define known (hash-copy table))
   (define key->pod (apply aggregate-routes ps))
   (define unfinished (mutable-set))
   (define R
     (make-resolver-proc
      (case-lambda
-       [() known]
+       [() (hash-copy known)]
        [(key) (pod-ref key)]
-       [(key stop?) ((R key) stop?)]
+       [(key stop?) (apply-until (R key) stop?)]
        [(key stop? make-alias)
         (define val (R key stop?))
         (hash-set! known (make-alias key val) (R key))
         val])))
   (define (pod-ref key)
+    (when (continuation-mark-set-first (current-continuation-marks) key)
+      (error "cycle in loading for ~a" key))
     (unless (hash-has-key? known key)
       (hash-set! known key (key->pod key R)))
     (hash-ref known key))
@@ -54,8 +57,9 @@
 
 (define (in-found R stop? [keep? (λ _ #t)])
   (sequence-filter keep?
-                   (sequence-map (λ (pod) (or (and (stop? pod) pod)
-                                              (pod stop?)))
+                   (sequence-map (λ (p)
+                                   (or (and (stop? p) p)
+                                       (apply-until p stop?)))
                                  (in-hash (invert-found R)))))
 
 (module+ test
@@ -63,13 +67,13 @@
            racket/list)
 
   (define (key->key-build key sys)
-    (pod (string-upcase key)))
+    (pod key #t (string-upcase key)))
 
   (test-pred "Can recognize resolvers" resolver? (make-resolver void))
 
   (test-case "Can invert found"
-    (define pA (pod 'a))
-    (define pB (pod 'b))
+    (define pA (pod "a" 'a))
+    (define pB (pod "a" 'b))
     (define R (make-resolver (λ (key _) (if (< key 3) pA pB))))
     (for ([i (in-range 6)]) (R i))
     (define I (invert-found R))
@@ -78,7 +82,7 @@
     (check-equal? 2 (length (hash-keys I))))
 
   (test-case "Resolvers track encountered pods"
-    (define sys (make-resolver (λ (key _) (pod key))))
+    (define sys (make-resolver (λ (key _) (pod key #f))))
     (check-equal? (make-hash) (sys))
     (sys "a")
     (check-true (hash-has-key? (sys) "a")

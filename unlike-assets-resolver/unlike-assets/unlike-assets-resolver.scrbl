@@ -1,14 +1,16 @@
 #lang scribble/manual
 
 @require[@for-label[racket/base
+                    racket/bool
                     racket/contract
+                    racket/file
                     racket/function
                     racket/match
+                    racket/undefined
                     racket/rerequire
-                    kinda-ferpy
                     unlike-assets/resolver]]
 
-@title{Unlike Assets: Resolver}
+@title{@tt{unlike-assets/resolver}: Reference}
 @author{Sage Gerard}
 
 @defmodule[unlike-assets/resolver]
@@ -16,12 +18,13 @@
 @racketmodname[unlike-assets/resolver] provides all bindings from
 @racketmodname[unlike-assets/resolver/base],
 @racketmodname[unlike-assets/resolver/pod],
+@racketmodname[unlike-assets/resolver/fence],
 @racketmodname[unlike-assets/resolver/asset], and
 @racketmodname[unlike-assets/resolver/global].
 
 This section will cover each binding provided by all of these modules.
 
-@section{Asset Resolver}
+@section{@tt{unlike-assets/resolver/global}}
 @defmodule[unlike-assets/resolver/global]
 
 This module provides a process-wide interface for
@@ -37,15 +40,24 @@ resolve any key. You will need to provide an implementation by
 setting this parameter, possibly with @racket[u/a].
 }
 
-@defproc[(procure/weak [key string?]) stateful-cell?]{
-Equivalent to @racket[((current-resolver) key)].  This starts an
-asynchronous build for an asset (if needed), but does not wait for the
-result.
+@defproc[(procure/weak [key string?]) (-> asset?)]{
+This starts an asynchronous build for an asset (if needed), but does
+not wait for the result. Returns a procedure that will.
 }
 
-@defproc[(procure [key string?] [sym symbol?] ...) any/c]{
-This starts a build for an asset (if needed), waits for the results,
-then returns requested data.
+@defproc[(procure [key string?] [sym symbol?] ...) any]{
+This starts a build for an asset (if needed), waits for the result,
+then returns that asset.
+
+You can optionally provide symbols to access keys inside
+of the procured asset, in which case @racket[procure] will
+return as many values as there are @racket[sym] arguments.
+In this case, the asset itself is not returned.
+
+@racketblock[
+(define-values (size check-schema) (procure "data.json" 'size 'check-schema))
+(define title (procure "article.doc" 'title))
+]
 }
 
 @deftogether[(
@@ -56,14 +68,26 @@ You'll probably use the @tt{procure/*} procedures often enough to want
 these abbreviations.
 }
 
+@defform[(define-procured key id ...)]{
+
+These are equivalent:
+
+@racketblock[
+(define-procured "data.json" size check-schema)
+(define-values (size check-schema) (procure "data.json" 'size 'check-schema))
+]
+}
+
 @defproc[(u/a [route route/c] ...) void?]{
 Imperatively replaces @racket[current-resolver] with a new resolver
 built with the given routes. This preserves the hash table used by the
 existing resolver.
 }
 
-@section{Mapping Names to Living Racket Values}
+@section{@tt{unlike-assets/resolver/base}}
 @defmodule[unlike-assets/resolver/base]
+
+A resolver maps strings to @tech{pods}. Pods may use the same resolver,
 
 @defproc[(resolver? [p any/c]) boolean?]{
 Returns @racket[#t] if @racket[p] came from @racket[make-resolver].
@@ -73,36 +97,30 @@ Returns @racket[#t] if @racket[p] came from @racket[make-resolver].
 Matches procedures that map strings to @tech{pods}.
 }
 
-@defproc[(make-resolver [found (and/c hash? (not/c immutable?)) (make-hash)]
-                        [find-pod route/c] ...)
-                        resolver?]{
-Returns a procedure @racket[R] that manages but does not encapsulate
-@racket[found]. @racket[R] will store @tech{pods} it discovers in @racket[found].
+@defproc[(make-resolver [#:known known (hash/c string? pod?) (hash)] [find-pod route/c] ...) resolver?]{
+Returns a procedure @racket[R] that encapsulates a mutable copy
+of @racket[known].
 
 @racket[R]'s behavior depends on the number of provided arguments:
 
-@margin-note{Use @racket[(R key return? make-alias)] to find a pod with
-an old value. For example: If the pod found by @racket{main.css.rkt} produces
-stylesheet @racket{f871a234.css}, then @racket[make-alias] can cause
-@racket[(R "f871a234.css")] to return the pod that produced that stylesheet.}
 @itemlist[
-@item{@racket[(R)] evaluates to @racket[found]. Deleting keys from
-@racket[found] will not be harmful assuming no thread-safety issues, but it
-will force the resolver to recompute the value of the missing key if it
-is requested again.}
+@item{@racket[(R)] evaluates to a hash of string keys and @tech{pod} values.}
 
-@item{@racket[(R key)] will return @racket[(hash-ref found key)] if
-the key exists. Otherwise the key will first be set to the first
-non-@racket[#f] result from @racket[(find-pod key R)], for each given
-@racket[find-pod] in order. @racket[R] may be invoked recursively in
-any @racket[find-pod].}
+@item{@racket[(R key)] will return @racket[(hash-ref (R) key)], or
+raise @racket[exn:fail] if @racket[(current-continuation-marks)] maps
+@racket[key] to @racket[#t]. If the key does not map to a pod, then
+the pod will be created using the first @racket[(find-pod key R)] to
+return a pod value. @racket[R] may be invoked recursively in any
+@racket[find-pod].}
 
-@item{@racket[(R key return?)]: Like @racket[((R key) return?)] (See @racket[make-pod]).
-If a pod refers to itself via a cycle, then this will not terminate.}
+@item{@racket[(R key return?)]: Returns @racket[(or (return? P)
+(return? (P) ...))], where @racket[P] is @racket[(R key)]. Useful for
+finding a common value type.}
 
-@item{@racket[(R key return? make-alias)]: Like @racket[(R key return?)].
-As a side effect, makes the following true: @racket[(eq? (R key) (R (make-alias key (R key return?))))].
-}
+@item{@racket[(R key return? make-alias)]: Like @racket[(R key
+return?)].  As a side effect, it adds a key equal to
+@racket[(make-alias key (R key return?))] to the internal hash table.
+Useful for finding pods based on values they produced.}
 ]
 }
 
@@ -111,7 +129,6 @@ Returns a @racket[hasheq] hash that represents the inverse of
 @racket[(R)], meaning each key is a pod and each value is a list
 of keys used to refer to the respective pod.
 }
-
 
 @defproc[(in-found [R resolver?]
                    [return? predicate/c pod?]
@@ -127,95 +144,122 @@ value in @racket[R]'s managed hash.
 }
 
 
-@section{Pods}
+@section{@tt{unlike-assets/resolver/pod}}
 @defmodule[unlike-assets/resolver/pod]
 
 @deftech{Pods} keep Racket values up-to-date, asynchronously.
+
+@racketmodname[unlike-assets/resolver/pod] reprovides all bindings
+from @racketmodname[unlike-assets/resolver/fence].
 
 @defproc[(pod? [v any/c]) boolean?]{
 Returns @racket[#t] if @racket[v] came from @racket[make-pod].
 }
 
-@defproc[(make-pod [#:sample! sample! (-> any/c)]
-                   [#:build! build!  (-> any/c any/c)]
-                   [#:suppress? suppress? (-> any/c any/c any/c) eq?])
-  (and/c pod?
-         (-> predicate/c any/c))]{
-Returns a procedure @racket[P] that governs a changing value.
+@defproc[(make-pod [key string?] [make-build (-> (or/c #f (-> any/c)))]) pod?]{
+Returns a procedure @racket[build!] that governs a changing
+value. Initially, that value is @racket[undefined].
 
-When you apply @racket[make-pod], it will immediately evaluate
-@racket[(sample!)] and remember the value. It will then apply
-@racket[build!] to that value in a new thread.
+@racket[(build!)] starts a build (if needed) and returns a
+@racket[wait-for-result] procedure that does what it says.
 
-When you apply @racket[P], it checks @racket[(suppress? (sample!)
-previous)], where @racket[previous] is the last value returned from
-@racket[sample!].  If the result if @racket[#f], then it will run
-@racket[build!] on a new thread that replaces the original build
-result and thread.
-
-@margin-note{Why have @racket[return?] at all? Because many
-@tt{unlike-assets-*} packages capture changes in dependencies using
-chains of thunks. @racket[return?] allows you to search for a common
-representation of build output without ridiculous expressions like
-@racket[((((((P))))))].}
-@racket[P] accepts one formal parameter called @racket[return?].  The
-value of @racket[(P stateful-cell?)] is a @racketmodname[kinda-ferpy]
-cell @racket[C], whose value is a procedure that waits for and returns
-@racket[(build!)]. In general, @racket[(P return?)]  is @racket[(or
-(return? C) (return? (C)) (return? ((C))) ...)].
-}
-
-
-@defform*[((pod [suppress? id <- sample ...] expr ...)
-           (pod id <- sample1 expr ...)
-           (pod expr))]{
-Creates a pod. The first form expands directly to a call to
-@racket[make-pod].  As an example, the following two expressions are
-equivalent:
+Overall, use of a pod looks like this.
 
 @racketblock[
-(pod [= v <- (check-outside-world)
-             (return-something)]
-     (build-value-with v))
-
-(make-pod #:suppress? =
-          #:sample! (lambda ()
-                     (check-outside-world)
-                     (return-something))
-          #:build! (lambda (v) (build-value-with v)))
+(define build! (make-pod ...))
+(define wait-for-result (build!))
+(define result (wait-for-result))
 ]
 
-The @racket[<-] notates a binding between @racket[id] and the result
-of the @racket[sample ...] body. It can only be one value.
+@racket[(build!)] will apply @racket[make-build] in search of a
+procedure to use to create a singular Racket value.
 
-The first abbreviation has exactly one term before @racket[<-], and
-one fewer pair of brackets. It uses the first of the terms following
-@racket[<-] as the body of a @racket[#:sample!] argument, and
-uses @racket[equal?] as the argument to @racket[#:suppress?]
+If @racket[make-build] returns a procedure, then @racket[build!] will
+run the returned procedure in a new thread.  If a thread is already
+running for the pod, then that thread will be sent a break before
+being replaced. A continuation mark for @racket[key] is set to
+@racket[#t] in the dynamic extent of a pod's thread.
 
-@racketblock[
-(pod mtime <- (file-or-directory-modify-seconds path)
-     (displayln mtime))
+If @racket[make-build] returns @racket[#f], then @racket[build!] has no
+side-effects. Specifically, @racket[(build!)] will still return a wait
+procedure, but it will not break any existing build threads, and it
+will not create a new thread.
 
-(code:comment "becomes...")
-(make-pod #:suppress? equal?
-          #:sample! (lambda () (file-or-directory-modify-seconds path))
-          #:build! (lambda (mtime) (displayln mtime)))]
-
-The last abbreviation uses a single expression for a non-changing build.
-This is useful for tests and corner cases.
+Here's an example that returns the string contents of a file, where
+@racket[file->string] runs without blocking the current thread, but
+only if the file exists.
 
 @racketblock[
-(pod 1)
+(define build!
+  (make-pod "foo"
+            (lambda () (and (file-exists? "/home/me/data")
+                            (lambda () (file->string "/home/me/data"))))))
+]
 
-(code:comment "becomes...")
-(make-pod #:suppress? eq?
-          #:sample! (lambda () #f)
-          #:build! (lambda (v) 1))]
+The wait procedures returned by @racket[build!] are always
+@racket[eq?], meaning that it's the same procedure. It will always
+return the @italic{latest} result from the build.
+
+@racketblock[
+(define build! (make-pod "" (const (lambda () (current-seconds)))))
+(define get-seconds (build!))
+(get-seconds) (code:comment "1587437062")
+(build!) (code:comment "don't bind again")
+(code:comment "wait a few seconds...")
+(get-seconds) (code:comment "1587437070")
+]
+
+Finally, any values raised during a build will be caught and
+re-raised when you wait for them.
+
+@racketblock[
+(define build! (make-pod "" (const (lambda () (error "uh-oh")))))
+(define wait (build!))
+(wait) (code:comment "Exception re-raised here")
+]
 }
 
+@defproc[(make-pod/fenced [key string?] [build? (-> any/c)] [build (-> any/c)]) pod?]{
+Like @racket[make-pod], except @racket[build?] controls whether
+the pod uses @racket[build] to replace its value.
 
-@section{Assets Definitions}
+@racket[(make-pod/fenced key build? build)] is equivalent to:
+
+@racketblock[
+(define build! (make-pod key (lambda () (and (build?) build))))
+]
+}
+
+@defform*[(
+(pod key (=* fexp ...) body ...)
+(pod key body ...)
+)]{
+
+Creates a pod with an optional use of @racket[fence].
+
+@racketblock[
+(define build!
+  (pod key (=* (file-or-directory-modify-seconds path))
+       (file->string path)))
+
+(code:comment "expands to:")
+(define build!
+  (make-pod/fenced key
+    (fence (file-or-directory-modify-seconds path))
+    (lambda () (file->string path))))
+]
+
+In this example, @racket[file-or-directory-modify-seconds] will not
+evaluate unless you apply @racket[build!]. And even then,
+@racket[file->string] will not evaluate unless the fence thunk
+returns true. See @racket[fence] for details.
+
+Without a fence expression, @racket[(pod key body ...)] expands
+to @racket[(pod key (=* #f) body ...)]. Such pods only build
+their values once.
+}
+
+@section{@tt{unlike-assets/resolver/asset}}
 @defmodule[unlike-assets/resolver/asset]
 
 Assets are just hashes with lipstick.
@@ -269,3 +313,73 @@ you list must exist in the asset's hash for the pattern to match.
 (code:comment "match-define: no matching clause for #<procedure:asset>")
 ]
 }
+
+@section{@tt{unlike-assets/resolver/fence}}
+@defmodule[unlike-assets/resolver/fence]
+
+Fence thunks detect change. While fence thunks cooperate well with
+@racket[make-pod/fence], you can use them to test if you should react
+to some external circumstance.
+
+Fence thunks often use side-effects in the context of the
+@racketmodname[unlike-assets] collection, and they can consider raised
+values as a sign of change as opposed to a reason to halt a program.
+
+@defform[(fence body ...)]{
+Expands to:
+@racketblock[
+(make-fence-thunk (λ () body ...) equal?/raised #:capture #t)
+]
+}
+
+@defproc[(make-fence-thunk [sample (-> any/c)]
+                           [#:capture? capture? any/c #f]
+                           [same? (or/c (-> any/c any/c boolean? boolean? any/c)
+                                        (-> any/c any/c any/c))
+                                  (if capture? equal?/raised equal?)])
+                                  (-> boolean?)]{
+Returns a thunk @racket[F]. Semantically, if @racket[(F)] is
+@racket[#t], you can assume that something has changed according to
+@racket[sample] and @racket[same?].
+
+@racket[make-fence-thunk] immediately evaluates @racket[(sample)] and
+remembers it's value. The latest value of @racket[(sample)] will be
+cached on an ongoing basis. The first application of @racket[F] will
+always return @racket[#t] to capture the change from no value to the
+first cached value.
+
+Every time you apply @racket[F] after the first time, it will apply
+@racket[sample] and compare the returned value to the value last seen
+using @racket[same?]. If @racket[(same? ...)] is @racket[#f], then
+@racket[(F)] returns @racket[#t].
+
+If @racket[capture?] is true, then any value @racket[raise]d from
+@racket[sample] will be treated as the output of @racket[(sample)]
+(but that value will be flagged as raised to aid comparisons).
+
+@racket[same?] can accept either two or four formal arguments.  If
+two, then the arguments will just be the value from a call to
+@racket[(sample)], and the value from a subsequent call to
+@racket[(sample)], in that order. If @racket[same?] accepts four
+arguments, the latter two arguments are just booleans. The first
+boolean is @racket[#t] if the first argument was raised from the body
+of @racket[sample].  The second boolean is @racket[#t] if the same
+applies to the second argument.  If @racket[capture?] is @racket[#f],
+then the boolean arguments will always be @racket[#f].
+
+@racketblock[
+(define (same? prev-sample next-sample prev-raised? next-raised?)
+  (when (and (not prev-raised?) next-raised?)
+    (displayln "An error appeared"))
+    ...)
+]
+
+}
+
+@defproc[(equal?/raised [a any/c] [b any/c] [a-raised? boolean?] [b-raised? boolean?]) any/c]{
+Like @racket[equal?], except the result is @racket[#f] if @racket[(xor a-raised? b-raised?)].
+
+Also, if @racket[a] and @racket[b] were both raised and are both
+exceptions, @racket[(equal?/raised a b #t #t)] is true if @racket[a]
+is @racket[eq?] to @racket[b], or if @racket[(equal? (exn-message a)
+(exn-message b))] is true.}

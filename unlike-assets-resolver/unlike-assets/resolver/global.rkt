@@ -7,6 +7,7 @@
          "pod.rkt")
 
 (provide (rename-out [procure/weak Pw] [procure Ps])
+         define-procured
          (contract-out
           [in-assets (->* () ((-> asset? any/c)) sequence?)]
           [u/a (->* () #:rest (listof route/c) void?)]
@@ -23,12 +24,11 @@
   (in-found (current-resolver) asset? keep?))
 
 (define (u/a . ps)
-  (current-resolver (apply make-resolver ((current-resolver)) ps)))
+  (current-resolver (apply make-resolver #:known ((current-resolver)) ps)))
 
 (define current-resolver (make-parameter (make-resolver)))
 
-(define (procure key . syms)
-  (log-message (current-logger)
+#;  (log-message (current-logger)
                'debug
                'unlike-assets
                (format "(procure ~a~a)"
@@ -37,6 +37,8 @@
                            ""
                            (string-join (map ~a syms) " ")))
                (current-continuation-marks))
+
+(define (procure key . syms)
   (let ([la ((current-resolver) key asset?)])
     (if (null? syms)
         la
@@ -44,8 +46,13 @@
             (la (car syms))
             (apply values (map la syms))))))
 
+(define-syntax-rule (define-procured key ids ...)
+  (define-values (ids ...) (procure key 'ids ...)))
+
 (define (procure/weak key)
-  ((current-resolver) key))
+  (define p ((current-resolver) key))
+  (p)
+  p)
 
 (module+ test
   (require rackunit)
@@ -57,7 +64,9 @@
       body ...))
 
   (define (uppers key sys)
-    (pod (asset [key key]
+    (pod key
+         #f
+         (asset [key key]
                 [up (string-upcase key)])))
 
   (test-case "A shared resolver is available"

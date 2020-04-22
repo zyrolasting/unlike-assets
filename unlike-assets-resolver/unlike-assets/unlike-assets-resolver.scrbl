@@ -330,9 +330,9 @@ Creates a contract that captures individual values in an asset.
 }
 
 @defform[(asset/p id ...)]{
-A @racket[match] pattern for assets, @italic{not} the hashes they
-decorate. You do not have to list every key for an asset, but every key
-you list must exist in the asset's hash for the pattern to match.
+A @racket[match] pattern for assets procedures. You do not have to
+list every key for an asset's underlying hash, but every key you list
+must exist in that hash for the pattern to match.
 
 @racketblock[
 (match-define (asset/p flavor) (asset [flavor 'chocolate] [kind 'ice-cream]))

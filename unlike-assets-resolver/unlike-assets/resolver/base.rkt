@@ -27,9 +27,10 @@
 (define (aggregate-routes . ps)
   (if (null? ps)
       (λ (k r) (error 'u/a "No pod for key: ~a" k))
-      (λ (k r)
-        (or ((car ps) k r)
-            (apply aggregate-routes (cdr ps))))))
+      (let ([next (apply aggregate-routes (cdr ps))])
+        (λ (k r)
+          (or ((car ps) k r)
+              (next k r))))))
 
 (define (make-resolver #:known [table #hash()] . ps)
   (define known (hash-copy table))
@@ -83,6 +84,14 @@
 
   (define (key->key-build key sys)
     (pod key #t (string-upcase key)))
+
+
+  (test-case "Can aggregate routes"
+    (define n 5)
+    (define route (apply aggregate-routes
+                         (map (λ (i) (λ (k r) (and (eq? k i) i))) (range n))))
+    (for ([j (in-range n)])
+      (check-eq? (route j #f) j)))
 
   (test-pred "Can recognize resolvers" resolver? (make-resolver void))
 

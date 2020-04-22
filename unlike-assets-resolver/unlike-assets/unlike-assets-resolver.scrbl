@@ -314,6 +314,12 @@ These two expressions are equivalent:
                   'nums '(1 3)))]
 }
 
+@defproc[(merge-assets [#:combine/key combine/key procedure? (lambda (k v0 v) v)] [a asset?] ...) asset?]{
+Like @racket[hash-union], except assets are merged in order.  By
+default, key conflicts are resolved by selecting the value from the
+value belonging to last asset among the arguments with that key.
+}
+
 @defform[(asset/c pair ...)
          #:grammar [(pair [id contract-expr])]]{
 Creates a contract that captures individual values in an asset.

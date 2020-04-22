@@ -2,6 +2,7 @@
 
 ; Assets are procedures that wrap a subset of immutable hashes.
 (require racket/contract
+         racket/hash
          idiocket/function
          racket/match
          (for-syntax racket/base
@@ -11,6 +12,10 @@
          asset/c
          asset/p
          (contract-out [asset? predicate/c]
+                       [merge-assets (->* ()
+                                          (#:combine/key (-> symbol? any/c any/c any/c))
+                                          #:rest (non-empty-listof asset?)
+                                          asset?)]
                        [make-asset (-> (and/c immutable? hash?)
                                        (case->
                                         (-> (and/c immutable? hash?))
@@ -29,6 +34,11 @@
    (case-lambda [()    h]
                 [(k)   (hash-ref h k)]
                 [(k t) (hash-ref h k t)])))
+
+(define (merge-assets #:combine/key [combine/key (λ (k v0 v) v)] . assets)
+  (make-asset (apply hash-union
+                     #:combine/key combine/key
+                     (map (λ (a) (a)) assets))))
 
 (define-syntax (asset stx)
   (syntax-parse stx
@@ -53,6 +63,18 @@
     (check-eq? (a 'b) 2)
     (check-eq? (a 'c) 3)
     (check-equal? (a) #hash((a . 1) (b . 2) (c . 3))))
+
+  (test-case "Merging"
+    (test-equal? "With default combine/key"
+                 ((merge-assets (asset [a 1] [b 2] [c 3])
+                                (asset [x 4] [y 5] [c 6])))
+                 #hash((a . 1) (b . 2) (c . 6) (x . 4) (y . 5)))
+    (test-equal? "With own combine/key"
+                 ((merge-assets #:combine/key (λ (k v0 v) k)
+                                (asset [a 1])
+                                (asset [a 2])
+                                (asset [a 3])))
+                 #hash((a . a))))
 
   (test-exn "Contract enforcement"
             exn:fail:contract?

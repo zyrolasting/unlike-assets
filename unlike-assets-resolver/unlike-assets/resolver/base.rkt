@@ -46,7 +46,12 @@
         (define val (R key stop?))
         (hash-set! known (make-alias key val) (R key))
         val])))
+
   (define (pod-ref key)
+    (raise-if-in-cycle key)
+    (hash-ref! known key (λ () (key->pod key R))))
+
+  (define (raise-if-in-cycle key)
     (define dependents (continuation-mark-set-first (current-continuation-marks) 'dependent-pods))
     (when (and (list? dependents) (member key dependents))
       (raise (exn:fail:unlike-assets:cycle
@@ -57,10 +62,7 @@
                        "\n"))
               (current-continuation-marks)
               key
-              dependents)))
-    (unless (hash-has-key? known key)
-      (hash-set! known key (key->pod key R)))
-    (hash-ref known key))
+              dependents))))
   R)
 
 (define (invert-found R)

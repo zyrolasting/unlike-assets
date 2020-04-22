@@ -20,7 +20,7 @@
                                        (case->
                                         (-> (and/c immutable? hash?))
                                         (-> symbol? any/c)
-                                        (-> symbol? procedure? any)))]))
+                                        (-> symbol? any/c any)))]))
 
 (define-values (make-asset-proc asset?) (of-name "asset"))
 

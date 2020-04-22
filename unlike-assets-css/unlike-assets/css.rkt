@@ -24,13 +24,15 @@
 
 (define (make-stylesheet input-path output-dir css)
   (define (write-css o)
-    (write-bytes (string->bytes/utf-8 css)))
+    (write-bytes (string->bytes/utf-8 css) o))
   (asset [input-file-path input-path]
          [output-file-path
-          (build-path output-dir
-                      (make-cache-busting-file-name input-path
-                                                    (open-input-string css)))]
-         [write write-css]
+          (path-replace-extension
+           (build-path output-dir
+                       (make-cache-busting-file-name input-path
+                                                     (open-input-string css)))
+           #".css")]
+         [write-file write-css]
          [->http-response
           (λ (req)
             (response/output #:code 200
@@ -39,13 +41,14 @@
 
 (define (css-modules input-directory output-directory)
   (disjoin (racket-modules (λ (key)
-                             (define modpath (simplify-path (build-path output-directory key)))
+                             (define modpath (simplify-path (build-path input-directory key)))
                              (and (file-exists? modpath)
                                   (equal? (path-get-extension modpath) #".rkt")
                                   (let ([get-info (call-with-input-file modpath read-language)])
                                     (and get-info
                                          (member #"text/css"
-                                                 (get-info 'unlike-assets:supported-media-types))))))
+                                                 (get-info 'unlike-assets:supported-media-types null))
+                                         modpath))))
                            (λ (modpath)
                              (make-stylesheet modpath output-directory
                                               (dynamic-require modpath 'css))))

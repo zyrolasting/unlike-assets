@@ -17,7 +17,9 @@
   (path->string (find-relative-path/by-file dependent-path dependency-path)))
 
 (define (procure/href input-path key)
-  (find-href input-path (Ps key 'output-file-path)))
+  (find-href input-path
+             (Ps key 'output-file-path
+                 #:make-alias (λ (k a) (find-href input-path (a 'output-file-path))))))
 
 (define (procure/weak/href key)
   (Pw key)

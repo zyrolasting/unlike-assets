@@ -13,6 +13,13 @@
                [make-pod/fenced (-> string? (-> any/c) (-> any/c) pod?)]
                [pod? predicate/c]))
 
+(define (<log msg)
+  (log-message (current-logger)
+               'debug
+               'unlike-assets
+               msg
+               (current-continuation-marks)))
+
 (define-values (make-pod-proc pod?) (of-name "pod"))
 
 (define-syntax pod
@@ -29,7 +36,6 @@
             (λ () (and (build?) build))))
 
 (define (make-pod key make-build)
-  (define build #f)
   (define worker #f)
   (define result undefined)
   (define raised #f)
@@ -48,17 +54,18 @@
     (set! result res)
     (set! raised #t))
 
-  (define (main mark)
+  (define (main mark task)
     (with-continuation-mark 'dependent-pods mark
       (with-handlers ([(const #t) on-raised])
-        (on-finish (build)))))
+        (on-finish (task)))))
 
   (define (provision mark)
-    (set! build (make-build))
+    (define build (make-build))
     (when build
+      (<log (format "update: ~a" key))
       (when (thread? worker)
         (break-thread worker))
-      (set! worker (thread (λ () (main mark))))))
+      (set! worker (thread (λ () (main mark build))))))
 
   (define (wait-for-result)
     (when (thread? worker)
@@ -69,6 +76,7 @@
 
   (make-pod-proc
    (λ ()
+     (<log (format "signal: ~a" key))
      (provision (add-dependent))
      wait-for-result)))
 

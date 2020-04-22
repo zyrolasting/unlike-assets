@@ -36,7 +36,7 @@
 
 (define/under-policy (write-resolved-to-filesystem! [sys (current-resolver)] #:exists [exists 'error])
   (for/fold ([written #hash()])
-            ([a (in-assets #:keep? asset/file-destined/c)])
+            ([a (in-assets asset/file-destined/c)])
     (hash-set written
               (a 'output-file-path)
               (write-asset-to-filesystem! a #:exists exists))))

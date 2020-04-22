@@ -11,7 +11,7 @@
          unlike-assets/resolver)
 
 (define procure-responder/c
-  (-> string? (asset/c [->http-response (-> request? response?)])))
+  (-> string? (asset/c [->http-response (or/c response? (-> request? response?))])))
 
 (provide
  (rename-out [asset/serveable/c asset/servable/c])
@@ -52,7 +52,11 @@
    (λ (req)
      (with-handlers ([exn:fail? show-error])
        (define a (Ps (url->asset-key (request-uri req))))
-       (define respond (a '->http-response (λ () (λ (req) (show-asset a)))))
+       (define maybe-responder (a '->http-response (λ () (λ (req) (show-asset a)))))
+       (define respond
+         (if (procedure? maybe-responder)
+             maybe-responder
+             (λ (req) maybe-responder)))
        (respond req)))))
 
 (define (start-server #:port [port 8080] [url->asset-key default-url->asset-key])

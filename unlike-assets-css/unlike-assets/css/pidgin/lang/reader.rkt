@@ -24,7 +24,7 @@
   (with-syntax ([srcp src] [(rktc ...) #`#,racket-code] [(cssc ...) #`#,(cdr css-exprs)])
     (strip-context
      #`(module style-asset racket/base
-         (provide make-asset)
+         (provide css)
          (require unlike-assets/css unlike-assets/resolver unlike-assets/files/resolve)
          (define add-css-expr! (make-style-accumulator))
          rktc ...

@@ -29,8 +29,7 @@
     [(_ exprs)
      #`(begin
          (define doc (format-document (list . #,(reverse (syntax->list #'exprs)))))
-         (define (render) (apply-in-list doc))
-         (provide render))]
+         (provide doc))]
     [(_ exprs . body)
      ;; Accumulate string literals from `body' to avoid trampolining on every one
      (let loop ([body #'body] [accum null])

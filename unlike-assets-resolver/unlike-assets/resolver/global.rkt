@@ -61,12 +61,11 @@
   (define Pw procure/weak)
 
   (define-syntax-rule (with-u/a (ps ...) body ...)
-    (parameterize ([current-resolver (make-resolver ((current-resolver)) ps ...)])
+    (parameterize ([current-resolver (make-resolver ps ...)])
       body ...))
 
   (define (uppers key sys)
     (pod key
-         #f
          (asset [key key]
                 [up (string-upcase key)])))
 

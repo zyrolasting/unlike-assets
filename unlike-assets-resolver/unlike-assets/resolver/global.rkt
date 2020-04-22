@@ -52,6 +52,7 @@
 (define (procure/weak key)
   (define r (current-resolver))
   (define p (r key))
+  (p)
   (λ () (r key asset?)))
 
 (module+ test

@@ -55,5 +55,9 @@
   (λ (key recurse)
     (let ([module-path (normalized key)])
       (and module-path
-           (pod [(λ (a b) (null? b)) _ <- (dynamic-rerequire module-path #:verbosity 'none)]
-                (make-asset module-path))))))
+           (make-pod/fenced
+            key
+            (make-fence-thunk #:capture? #t
+                              (λ () (dynamic-rerequire module-path #:verbosity 'none))
+                              (λ (a b) (null? b)))
+            (λ () (make-asset module-path)))))))

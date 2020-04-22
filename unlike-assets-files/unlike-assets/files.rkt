@@ -16,7 +16,7 @@
  (all-from-out "files/contracts.rkt"
                "files/resolve.rkt")
  (contract-out
-  [static-files (->* ((-> complete-path? exact-integer? asset/file-to-file/c)
+  [static-files (->* ((-> complete-path? asset/file-to-file/c)
                       (or/c (listof (and/c path-string?
                                            path-for-some-system?
                                            directory-exists?))
@@ -54,6 +54,7 @@
   (λ (key recurse)
     (define path (key->path key))
     (and path
-         (file-exists? path)
-         (pod mtime <- (file-or-directory-modify-seconds path)
-              (on-new-file path mtime)))))
+         (make-pod/fenced
+          key
+          (λ () (file-or-directory-modify-seconds path))
+          (λ () (on-new-file path))))))

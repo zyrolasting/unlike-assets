@@ -49,7 +49,7 @@
                            (λ (modpath)
                              (make-stylesheet modpath output-directory
                                               (dynamic-require modpath 'css))))
-           (static-files (λ (file-path mtime)
+           (static-files (λ (file-path)
                            (make-stylesheet file-path output-directory
                                             (file->string file-path)))
                          (λ (key)

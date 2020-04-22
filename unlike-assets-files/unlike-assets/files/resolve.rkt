@@ -8,27 +8,24 @@
          "contracts.rkt")
 
 (provide (contract-out
-          [procure/strong/relative-path-string (-> complete-path?
-                                                   string?
-                                                   string?)]
-          [procure/weak/relative-path-string (-> string? string?)])
+          [find-href (-> complete-path? complete-path? string?)]
+          [procure/href (-> complete-path? string? string?)]
+          [procure/weak/href (-> string? string?)])
          define-relative-dependency-lookups)
 
-(define (procure/strong/relative-path-string input-path key)
-  (path->string (find-relative-path/by-file
-                 input-path
-                 (with-contract procure/strong/relative-path-string
-                   #:result complete-path?
-                   #:freevars ([Ps (-> string? asset/file-destined/c)])
-                   ((Ps key) 'output-file-path)))))
+(define (find-href dependent-path dependency-path)
+  (path->string (find-relative-path/by-file dependent-path dependency-path)))
 
-(define (procure/weak/relative-path-string key)
+(define (procure/href input-path key)
+  (find-href input-path (Ps key 'output-file-path)))
+
+(define (procure/weak/href key)
   (Pw key)
   key)
 
 (define-syntax-rule (define-relative-dependency-lookups dependent-path-expr)
-  (begin (define (Ps& k) (procure/strong/relative-path-string dependent-path-expr k))
-         (define Pw& procure/weak/relative-path-string)))
+  (begin (define (Ps& k) (procure/href dependent-path-expr k))
+         (define Pw& procure/weak/href)))
 
 (define (local-file-url? str)
   (with-handlers ([exn:fail:contract? (λ _ #f)])

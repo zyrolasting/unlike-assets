@@ -50,7 +50,7 @@
 (define (make-dispatcher [url->asset-key default-url->asset-key])
   (lifter:make
    (λ (req)
-     (with-handlers ([exn:fail? show-error])
+     (with-handlers ([exn? show-error])
        (define a (Ps (url->asset-key (request-uri req))))
        (define maybe-responder (a '->http-response (λ () (λ (req) (show-asset a)))))
        (define respond

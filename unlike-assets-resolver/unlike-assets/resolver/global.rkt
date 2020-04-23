@@ -5,14 +5,18 @@
          "asset.rkt"
          "pod.rkt")
 
-(provide (rename-out [procure/weak Pw] [procure Ps])
-         define-procured
+(define procure/weak/c (->* (string?) (-> asset?)))
+(define procure/c (->* (string?) #:rest (listof symbol?) any))
+
+(provide define-procured
          (contract-out
-          [in-assets (->* () ((-> asset? any/c)) sequence?)]
+          [in-assets (->* () ((-> asset? (non-empty-listof string?) any/c)) sequence?)]
           [u/a (->* () #:rest (listof route/c) void?)]
           [current-resolver (parameter/c resolver?)]
-          [procure/weak (->* (string?) (#:make-alias (or/c #f (-> asset? string?))) (-> asset?))]
-          [procure (->* (string?) (#:make-alias (or/c #f (-> asset? string?))) #:rest (listof symbol?) any/c)]))
+          [procure/weak procure/weak/c]
+          [procure procure/c]
+          [rename procure/weak Pw procure/weak/c]
+          [rename procure Ps procure/c]))
 
 (require racket/format
          racket/sequence
@@ -27,29 +31,22 @@
 
 (define current-resolver (make-parameter (make-resolver)))
 
-(define (procure #:make-alias [make-alias #f] key . syms)
-  (define r (current-resolver))
-  (define a
-    (if make-alias
-        (r key asset? make-alias)
-        (r key asset?)))
-
-  (if (null? syms)
-      a
-      (if (= (length syms) 1)
-          (a (car syms))
-          (apply values (map a syms)))))
+(define (procure key . syms)
+  (let ([a ((current-resolver) key asset?)])
+    (if (null? syms)
+        a
+        (if (= (length syms) 1)
+            (a (car syms))
+            (apply values (map a syms))))))
 
 (define-syntax-rule (define-procured key ids ...)
   (define-values (ids ...) (procure key 'ids ...)))
 
-(define (procure/weak key #:make-alias [make-alias #f])
+(define (procure/weak key)
   (define r (current-resolver))
   (define p (r key))
   (p)
-  (λ () (if make-alias
-            (r key asset? make-alias)
-            (r key asset?))))
+  (λ () (procure key)))
 
 (module+ test
   (require rackunit)

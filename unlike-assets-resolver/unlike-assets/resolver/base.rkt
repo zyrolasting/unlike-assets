@@ -14,9 +14,15 @@
  (contract-out
   [resolver? predicate/c]
   [make-resolver
-   (->* () (#:known (hash/c string? pod?)) #:rest (non-empty-listof route/c) resolver?)]
+   (->* () (#:known (hash/c string? pod?)) #:rest (non-empty-listof route/c)
+        (and/c resolver?
+               (case-> (-> hash?)
+                       (-> string? pod?)
+                       (-> string? (-> any/c any/c) any/c))))]
   [invert-found (-> resolver? (hash/c pod? (non-empty-listof string?) #:immutable #t))]
-  [in-found (->* (resolver? predicate/c) ((-> pod? (non-empty-listof string?) any/c)) sequence?)]))
+  [in-found (->* (resolver? predicate/c)
+                 ((-> any/c (non-empty-listof string?) any/c))
+                 sequence?)]))
 
 (define-struct (exn:fail:unlike-assets:cycle exn:fail)
   (dependency-key dependents))
@@ -41,11 +47,7 @@
      (case-lambda
        [() (hash-copy known)]
        [(key) (pod-ref key)]
-       [(key stop?) (apply-until (R key) stop?)]
-       [(key stop? make-alias)
-        (define val (R key stop?))
-        (hash-set! known (make-alias key val) (R key))
-        val])))
+       [(key stop?) (apply-until (R key) stop?)])))
 
   (define (pod-ref key)
     (raise-if-in-cycle key)
@@ -75,9 +77,10 @@
 
 (define (in-found R stop? [keep? (λ _ #t)])
   (sequence-filter keep?
-                   (sequence-map (λ (p)
-                                   (or (and (stop? p) p)
-                                       (apply-until p stop?)))
+                   (sequence-map (λ (p keys)
+                                   (values (or (and (stop? p) p)
+                                               (apply-until p stop?))
+                                           keys))
                                  (in-hash (invert-found R)))))
 
 (module+ test

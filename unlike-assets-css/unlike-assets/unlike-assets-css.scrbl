@@ -8,33 +8,30 @@
 This module produces CSS stylesheets as living assets.
 
 @section{Racket-CSS Pidgin Language}
-@defmodule[unlike-assets/css/pidgin #:lang]
+@defmodule[unlike-assets/css #:reader]
 
-When used as a @litchar{#lang},
-@racketmodname[unlike-assets/css/pidgin] reads a section of Racket
-code followed by a section of CSS Expressions as per
-@racketmodname[css-expr]. All style declarations are accumulated, then
-provided as a minified string.
+When used with @litchar{#reader}, @racketmodname[unlike-assets/css]
+reads an expression that evaluates to a directory path, then a
+sequence of @racketmodname[css-expr] expressions until the
+@racket[#:end] keyword.
 
-The Racket section has all of the bindings from
-@racketmodname[racket/base], @racketmodname[unlike-assets/css], and
-@racketmodname[css-expr] available for use.
-
-@racketmod[unlike-assets/css
-(code:comment "You can write racket/base code normally")
-(require racket/format)
-
-(code:comment "You can declare variables for later interpolation.")
-(define color '|#888|)
-
-(code:comment "You can use macros in the Racket section to add style declarations")
-(code:comment "that would be painful to write by hand.")
-(add-css-expr! (font-face "code" "fonts/sourcecodepro-bold-webfont" 'normal 'bold))
-
-(code:comment "CSS expressions start in a named section.")
-#:begin-css
+@racketblock[
+(define body-width '600px)
+(define styles #reader unlike-assets/css maybe-output-dir
 
 [* #:box-sizing border-box]
-[h1 #:text-transform uppercase]
-[.my-widget #:color ,color]
+[body #:width ,body-width
+      #:background-image (apply url ,(procure/href "bg.webp"))]
+
+#:end)
+
+(displayln (styles))
 ]
+
+In this example, @racket[styles] is bound to a thunk that returns a
+CSS string. While the thunk is running, @racket[procure/href] assumes
+that the given styles will appear in a stylesheet located at
+@racket[maybe-output-dir]. If @racket[output-dir] is @racket[#f], then
+@racket[procure/href] will behave like @racket[procure/weak/href].
+This makes @racket[styles] non-deterministic, but the output styles
+will always contain correct paths.

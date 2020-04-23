@@ -119,12 +119,6 @@ where @racket[P] is the @tech{pod} returned from @racket[(R key)]. Useful for
 finding a common value type. Remember that due to the nature of pods, @racket[(R key return?)]
 is non-deterministic.
 }
-
-@item{@racket[(R key return? make-alias)]: Like @racket[(R key
-return?)].  As a side effect, it adds a key equal to
-@racket[(make-alias key (R key return?))] to the internal hash table.
-Useful for finding pods based on values they produced.}
-]
 }
 
 @defstruct[exn:fail:unlike-assets:cycle ([dependency-key string?] [dependent-keys (listof string)])]{

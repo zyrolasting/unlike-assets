@@ -4,9 +4,9 @@
 (require racket/cmdline
          racket/logging
          racket/tcp
-         unlike-assets/resolver
-         unlike-assets/files
          raco/command-name
+         "../resolver.rkt"
+         "../files.rkt"
          "server.rkt"
          "distributor.rkt")
 

@@ -6,7 +6,7 @@
          racket/path
          racket/set
          racket/sequence
-         unlike-assets/files
+         "../files.rkt"
          "distributor/security.rkt")
 
 (provide

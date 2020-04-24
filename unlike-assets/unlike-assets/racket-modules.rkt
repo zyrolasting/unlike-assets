@@ -5,8 +5,8 @@
          racket/rerequire
          racket/path
          racket/sequence
-         unlike-assets/resolver
-         unlike-assets/files)
+         "resolver.rkt"
+         "files.rkt")
 
 (define module-path/c
   (or/c module-path?

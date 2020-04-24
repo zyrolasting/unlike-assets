@@ -27,10 +27,9 @@ with other formats or protocols.
 As an end-user, you can write modules like this to organize
 a creative project:
 
-@racketmod[
-#lang u/a
+@racketmod[u/a
 
-(require unlike-assets2
+(require unlike-assets
          "my-asset-definitions.rkt")
 
 (u/a (posts)

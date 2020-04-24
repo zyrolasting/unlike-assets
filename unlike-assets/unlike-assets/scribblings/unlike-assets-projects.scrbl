@@ -16,8 +16,9 @@
 @defmodule[unlike-assets/projects]
 
 @racketmodname[unlike-assets/projects] includes all bindings from
-@racketmodname[unlike-assets/projects/server], @racketmodname[unlike-assets/projects/cli],
-and @racketmodname[unlike-assets/projects/distributor].
+@racketmodname[unlike-assets/projects/server],
+@racketmodname[unlike-assets/projects/cli], and
+@racketmodname[unlike-assets/projects/distributor].
 
 @section{Development Server}
 @defmodule[unlike-assets/projects/server]

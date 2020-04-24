@@ -41,18 +41,15 @@ All you have to do is evaluate the dependent expression again.
 ```
 
 ## What's Here?
-This repository tracks a contained ecosystem of packages. It all starts in
-`unlike-assets-resolver`, which provides a configurable module resolver
-that asynchronously maps string URLs to up-to-date hashes.
+This repository tracks a contained ecosystem of packages. It all
+starts in `unlike-assets`, which provides a configurable module
+resolver that asynchronously maps string URLs to up-to-date Racket
+values.
 
-The other packages play different roles. Most of them define a kind of
-asset that the resolver can use. Others offer recipes that ease use
-of lower-level packages. If you don't want to think about it too much,
-you'll just want the `unlike-assets` package, which bundles useable
-defaults with a `#lang`.
-
-Once the defaults no longer suffice, you will need to install
-the packages relevant to you.
+By default, the resolver does nothing. The other packages extend
+the resolver to understand different data formats. One goal of
+of this project is to add new formats over time, but you are
+not limited to the packages available here.
 
 ## WTF is with this filesystem?
 **Short answer**: Racket made me do it.

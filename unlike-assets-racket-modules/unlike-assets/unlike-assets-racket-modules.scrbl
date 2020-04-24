@@ -4,45 +4,41 @@
                     racket/contract
                     racket/rerequire
                     unlike-assets/racket-modules
-                    unlike-assets/resolver]]
+                    unlike-assets/files
+                    unlike-assets]]
 
 @title{Unlike Asset: Racket Module}
 
 @defmodule[unlike-assets/racket-modules]
 
-@deftogether[(
-@defthing[module-path/c (or/c module-path? resolved-module-path? module-path-index?)]
-@defproc[(racket-modules [make-module-path (or/c path-for-some-system?
-                                                 path-string?
-                                                 (-> string? module-path/c))]
-                         [user-data any/c] ...)
-                         procedure?])]{
-Returns a procedure @racket[P] suitable for use in @racket[u/a].
+@defthing[module-path-like/c
+         (or/c path-for-some-system? module-path? resolved-module-path? module-path-index?)]{
+Captures values that @racket[racket-modules] can translate to a proper Racket
+module path.
+}
 
-@racket[P] consults @racket[make-module-path] to derive a usable module
-path for @racket[dynamic-rerequire] and @racket[dynamic-require].
+@defproc[(racket-modules [make-module-path (-> string? (or/c #f module-path-like/c))]
+                         [module-path->asset (-> module-path-like/c asset?) make-asset-from-provides])
+                         route/c]{
+Returns a procedure suitable for use as an extension in @racket[u/a].
 
-@itemlist[
-@item{If @racket[make-module-path] is a path for a filesystem, then it
-will be treated as a directory. Any request for a module using a
-relative path will be relative to that directory. If the directory
-does not exist or is not readable, then an argument error will be
-raised.}
+@margin-note{If you want to scope this extension to a limited part of the
+filesystem, consider using @racket[within-directories].}
+The procedure consults @racket[make-module-path] to derive a usable
+module path for @racket[dynamic-rerequire]. If
+@racket[make-module-path] returns @racket[#f], then the procedure will
+yield to other extensions. Otherwise, it will apply
+@racket[module-path->asset] to the returned path.
 
-@item{If @racket[make-module-path] is a procedure, then it must
-map a string key from @racket[current-u/a-build-system] to a module path.}]
+The modules will not reload if you've already instantiated them
+without a leading @racket[dynamic-rerequire], so you should only use
+@racket[racket-modules] to manage Racket modules with reload support.
+}
 
-The module, when loaded, will always produce an asset by evaluating
-@racket[(apply (dynamic-require module-path 'make-asset) user-data)].
-
-There are some caveats:
-
-@itemlist[
-@item{Requested modules will not reload if you've already instantiated
-them without a leading @racket[dynamic-rerequire]. You should only use
-@racket[racket-modules] to manage Racket modules that you do not plan
-to load any other way.}
-
-@item{Some @racket[u/a] extensions require you to pass
-@racket[user-data] that meets a particular contract. You can manage
-any overlap using multiple calls to @racket[racket-modules].}]}
+@defproc[(make-asset-from-provides [module-path (or/c module-path?
+                                                      resolved-module-path?
+                                                      module-path-index?)])
+                                   asset?]{
+Loads the given Racket module using @racket[dynamic-require], and
+populates an asset with all runtime exports of the module.
+}

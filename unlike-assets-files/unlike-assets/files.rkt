@@ -17,11 +17,12 @@
                "files/resolve.rkt")
  (contract-out
   [static-files (->* ((-> complete-path? asset?)
-                      (or/c (or/c path-string? path-for-some-system?)
-                            (non-empty-listof (or/c path-string? path-for-some-system?))
-                            (-> string? (or/c #f complete-path?))))
+                      (-> string? (or/c #f complete-path?)))
                      route/c)]
-  [within-directories (-> (-> path? any/c) (non-empty-listof path?) (-> string? (or/c #f path?)))]
+  [within-directories (-> (-> path? any/c)
+                          (or/c (or/c path-string? path-for-some-system?)
+                                (non-empty-listof (or/c path-string? path-for-some-system?)))
+                          (-> string? (or/c #f path?)))]
   [file-path->asset (->* (complete-path? complete-path?)
                          (#:mime-type bytes?
                           #:writer (or/c #f (-> output-port? (or/c void? exact-nonnegative-integer?))))
@@ -42,19 +43,13 @@
          [write-file write-file]
          [->http-response (λ (req) (response/output #:mime-type mime-type write-file))]))
 
-(define (within-directories match? search-dirs)
+(define (within-directories match? search)
+  (define search-dirs (if (list? search) search (list search)))
   (λ (key)
     (define maybe (find-file-path key search-dirs #:must-exist #f))
     (and (match? maybe) maybe)))
 
-(define (static-files on-new-file variant)
-  (define key->path
-    (if (procedure? variant)
-        variant
-        (within-directories (const #t)
-                            (if (list? variant)
-                                variant
-                                (list variant)))))
+(define (static-files on-new-file key->path)
   (λ (key recurse)
     (define path (key->path key))
     (and path

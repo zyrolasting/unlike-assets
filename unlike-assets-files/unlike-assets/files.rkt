@@ -47,7 +47,9 @@
   (define search-dirs (if (list? search) search (list search)))
   (λ (key)
     (define maybe (find-file-path key search-dirs #:must-exist #f))
-    (and (match? maybe) maybe)))
+    (and maybe
+         (match? maybe)
+         maybe)))
 
 (define (static-files on-new-file key->path)
   (λ (key recurse)

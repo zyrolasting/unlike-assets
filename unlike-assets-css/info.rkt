@@ -5,6 +5,6 @@
 (define deps '("base"
                "idiocket"
                "web-server-lib"
-               "unlike-assets-resolver"
+               "unlike-assets"
                "unlike-assets-files"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))

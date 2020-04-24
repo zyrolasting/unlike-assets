@@ -8,18 +8,17 @@
          unlike-assets/resolver
          unlike-assets/files)
 
-(define module-path-like/c
-  (or/c path-for-some-system?
-        module-path?
+(define module-path/c
+  (or/c module-path?
         resolved-module-path?
         module-path-index?))
 
 (provide
- module-path-like/c
+ module-path/c
  (contract-out
-  [make-asset-from-provides (-> module-path-like/c asset?)]
-  [racket-modules (->* ((-> string? (or/c path-string? module-path-like/c #f)))
-                       ((-> module-path-like/c asset?))
+  [make-asset-from-provides (-> module-path/c asset?)]
+  [racket-modules (->* ((-> string? (or/c path-string? module-path/c #f)))
+                       ((-> module-path/c asset?))
                        procedure?)]))
 
 (define (make-asset-from-provides module-path)

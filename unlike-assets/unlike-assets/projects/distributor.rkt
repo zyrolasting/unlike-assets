@@ -35,8 +35,11 @@
     dst (a 'write-file)))
 
 (define/under-policy (write-resolved-to-filesystem! [sys (current-resolver)] #:exists [exists 'error])
+  (log-info "Write resolved")
   (for/fold ([written #hash()])
-            ([a (in-assets asset/file-destined/c)])
+            ([(a keys) (in-assets (λ (a keys)
+                                    (and (complete-path? (a 'output-file-path #f))
+                                         (procedure? (a 'write-file)))))])
     (hash-set written
               (a 'output-file-path)
               (write-asset-to-filesystem! a #:exists exists))))

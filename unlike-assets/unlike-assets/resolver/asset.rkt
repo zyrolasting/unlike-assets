@@ -27,8 +27,7 @@
 (define-syntax (asset/c stx)
   (syntax-parse stx
     [(n:id [x:id c:expr] ...+)
-     #'any/c
-     #;#'(first-or/c (-> (and/c immutable? hash?))
+     #'(first-or/c (-> (and/c immutable? hash?))
                    (->i ([k symbol?])
                         [result (k) (case k [(x) c] ... [else any/c])]))]))
 

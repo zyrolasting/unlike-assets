@@ -39,7 +39,6 @@ response provided by a procured asset.  The key used to procure the
 asset is first created using @racket[(url->asset-key (request-uri
 R))].
 
-
 If an error is thrown while fulfilling the request, then the
 dispatcher will respond with a 500 status code and the captured
 content from @racket[error-display-handler] as a @racket[#"text/plain; charset=utf-8"] body.
@@ -86,7 +85,7 @@ the resulting file will appear in its corresponding location in
 }
 
 @defproc[(write-resolved-to-filesystem!
-         [sys u/a-build-system? (current-u/a-build-system)]
+         [sys resolver? (current-resolver)]
          [#:exists exists symbol? 'error]) void?]{
 Apply @racket[write-asset-to-filesystem!] to all compatible assets
 in @racket[sys]. This is useful for saving project distributions.
@@ -95,7 +94,7 @@ in @racket[sys]. This is useful for saving project distributions.
 for each applicable file.
 }
 
-@defproc[(sync-filesystem-to-assets! [sys u/a-build-system? (current-u/a-build-system)]) void?]{
+@defproc[(sync-filesystem-to-assets! [sys resolver? (current-resolver)]) void?]{
 Performs a one-way sync from the assets in @racket[sys] to the host
 filesystem.
 

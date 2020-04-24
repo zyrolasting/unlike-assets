@@ -1,3 +1,4 @@
 #lang info
 (define deps '("base" "search-upward"))
-(define scribblings '(("unlike-assets-projects.scrbl" ())))
+(define scribblings '(("scribblings/unlike-assets-projects.scrbl" ())
+                      ("scribblings/unlike-assets-guide.scrbl" ())))

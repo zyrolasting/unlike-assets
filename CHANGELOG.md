@@ -16,7 +16,10 @@ level contracts, see v1.6). The social contract is that you should not
 upgrade until you have reason to do so, and if you are starting out
 with this project, you should use the latest version.
 
-## Unreleased
+## [2.0] - 2020-04-23
+* Refactor to multi-package solution centered around a module resolver.
+
+## Unreleased (1.x)
 * Add reactive model in `reactive.rkt`
 * Reorganize docs to emphasize models
 * Divided source into several multi-collection packages.

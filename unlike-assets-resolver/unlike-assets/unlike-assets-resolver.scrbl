@@ -119,7 +119,7 @@ where @racket[P] is the @tech{pod} returned from @racket[(R key)]. Useful for
 finding a common value type. Remember that due to the nature of pods, @racket[(R key return?)]
 is non-deterministic.
 }
-}
+]
 
 @defstruct[exn:fail:unlike-assets:cycle ([dependency-key string?] [dependent-keys (listof string)])]{
 An error raised when the resolver encounters a cycle.

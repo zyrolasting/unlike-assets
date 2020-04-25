@@ -22,7 +22,7 @@
                        procedure?)]))
 
 (define (make-asset-from-provides module-path)
-  (dynamic-require module-path (void))
+  (dynamic-require module-path #f)
   (define-values (exported-variables _) (module->exports module-path))
   (define phase0 (findf (λ (x) (eq? (car x) 0)) exported-variables))
   (make-asset

@@ -7,7 +7,7 @@
                     unlike-assets/files
                     unlike-assets]]
 
-@title{Unlike Asset: Racket Module}
+@title{Racket Modules}
 
 @defmodule[unlike-assets/racket-modules]
 

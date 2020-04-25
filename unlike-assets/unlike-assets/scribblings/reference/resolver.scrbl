@@ -19,19 +19,47 @@
 @racketmodname[unlike-assets/resolver/base],
 @racketmodname[unlike-assets/resolver/pod],
 @racketmodname[unlike-assets/resolver/fence],
+@racketmodname[unlike-assets/resolver/cycle],
 @racketmodname[unlike-assets/resolver/asset], and
-@racketmodname[unlike-assets/resolver/global].
+@racketmodname[unlike-assets/resolver/default].
 
 This section will cover each binding provided by all of these modules.
 
-@section{@tt{unlike-assets/resolver/global}}
-@defmodule[unlike-assets/resolver/global]
+@section{Summary of Model}
+The intended experience of an Unlike Assets resolver is to provide a
+@racket[(-> string? any/c)] variant of @racket[require] (e.g.
+@racket[procure]). That is, a import procedure that is not limited to
+@racket[require]'s data formats and conventions.  In this light, a
+non-Racket resource can present itself as a software module.
+
+In the context of this collection, an @deftech{asset} is a procedure
+that returns an immutable hash of possible data points, or the value
+of some data point.
+
+This isn't particularly exciting until we can guarentee that assets
+will be kept up-to-date. For that, I define @deftech{pods} as
+procedures that always return the latest version of their assigned
+asset. Pods optionally collaborate with @deftech{fences} to
+decide if they should compute a new asset.
+
+Finally, a @deftech{resolver} is a procedure that maps strings to
+pods.  Asset procurement is a runtime concern and there are an unknown
+number of steps from a name to a concrete value. For that reason, the
+resolver can iteratively apply thunks in search of a particular value
+type. Using the default resolver, that value type matches
+@racket[asset?].
+
+You, the user, may either configure the default resolver or assemble
+your own from these building blocks.
+
+@section{@tt{unlike-assets/resolver/default}}
+@defmodule[unlike-assets/resolver/default]
 
 This module provides a process-wide interface for
 @racketmodname[unlike-assets/resolver/base],
 @racketmodname[unlike-assets/resolver/pod], and
 @racketmodname[unlike-assets/resolver/asset]. You can create your own
-resolver in terms of those modules.
+resolver in terms of those modules, hence why this one is called @tt{default}.
 
 @defthing[current-resolver (parameter/c resolver?)]{
 This is a global resolver used by @racket[procure] to find updated
@@ -40,42 +68,28 @@ resolve any key. You will need to provide an implementation by
 setting this parameter, possibly with @racket[u/a].
 }
 
-@defproc[(procure/weak [key string?]) (-> asset?)]{
-This starts an asynchronous build for an asset (if needed), but does
-not wait for the result. Returns a procedure that will.
-}
+@defproc[(procure [key string?]) asset?]{
+Returns an asset using a string key, with the understanding that the
+asset contains up-to-date information. This implies that
+@racket[procure] is non-deterministic.
 
-@defproc[(procure [key string?] [sym symbol?] ...) any]{
-This starts a build for an asset (if needed), waits for the result,
-then returns that asset.
+As a side-effect, @racket[procure] logs the procure action to the
+@racket['unlike-assets] topic on the @racket['debug] level.
 
-You can optionally provide symbols to access keys inside
-of the procured asset, in which case @racket[procure] will
-return as many values as there are @racket[sym] arguments.
-In this case, the asset itself is not returned.
-
-@racketblock[
-(define-values (size check-schema) (procure "data.json" 'size 'check-schema))
-(define title (procure "article.doc" 'title))
-]
-}
-
-@deftogether[(
-@defthing[Pw procure/weak]
-@defthing[P procure]
-)]{
-You'll probably use the @tt{procure/*} procedures often enough to want
-these abbreviations.
-}
-
-@defform[(define-procured key id ...)]{
-
-These are equivalent:
+@racket[procure] will obtain a @tech{pod} @racket[P] using
+@racket[((current-resolver) key)], and then apply @racket[P] and any
+results iteratively until it obtains an asset.  This behavior is
+equivalent to the following:
 
 @racketblock[
-(define-procured "data.json" size check-schema)
-(define-values (size check-schema) (procure "data.json" 'size 'check-schema))
-]
+(let loop ([v ((current-resolver) key)])
+  (if (asset? v) v
+      (loop (v))))]
+
+It behaves this way to account for value types that contain several
+layers of indirection to obtain a concrete value. If @racket[v] never
+produces an asset and is always a procedure, then @racket[procure]
+will not terminate.
 }
 
 @defproc[(u/a [route route/c] ...) void?]{
@@ -84,9 +98,20 @@ built with the given routes. This preserves the hash table used by the
 existing resolver.
 }
 
+@defproc[(in-assets [R resolver?]
+                   [keep? (-> any/c (non-empty-listof string?) any/c)
+                   (const #t)]) sequence?]{
+Returns a two-value sequence filtered by @racket[keep?].
+
+The first value is an @tech{asset}. The second value is a list of all
+keys that can be used to access that asset using @racket[procure].
+
+This is useful for acting upon visited assets.
+}
+
+
 @section{@tt{unlike-assets/resolver/base}}
 @defmodule[unlike-assets/resolver/base]
-
 A resolver maps strings to @tech{pods}. Pods may use the same
 resolver to depend on other pods.
 
@@ -95,77 +120,66 @@ Returns @racket[#t] if @racket[p] came from @racket[make-resolver].
 }
 
 @defthing[route/c contract? #:value (-> string? resolver? (or/c #f pod?))]{
-Matches procedures that map strings to @tech{pods}.
+Matches procedures that map strings to @tech{pods}, or @racket[#f].
+
+@racket[#f] means that no pod applies for a given string.
 }
 
-@defproc[(make-resolver [#:known known (hash/c string? pod?) (hash)] [find-pod route/c] ...) resolver?]{
-Returns a procedure @racket[R] that encapsulates a mutable copy
-of @racket[known].
+@defproc[(make-resolver [known (hash/c string? pod?)]
+                        [key->pod (-> string? pod?)]
+                        [resolved? predicate/c])
+                        (and/c resolver?
+                               (case-> (-> (hash/c pod?
+                                                   (non-empty-listof string?)
+                                                   #:immutable #t))
+                                       (-> string? pod?)))]{
+Returns a procedure @racket[R] that encapsulates a mutable copy of
+@racket[known]. @racket[R]'s behavior depends on the number of
+provided arguments.
 
-@racket[R]'s behavior depends on the number of provided arguments:
+@racket[(R key)] binds @racket[key] to racket[(key->pod key
+R)], if the key is not already set. Returns @racket[(or
+(resolved? P) (resolved? (P)) ...)], where @racket[P] is the
+pod bound to @racket[key].
 
-@itemlist[
-@item{@racket[(R)] returns a copy of the internal hash.}
+If @racket[key->pod] does not return a pod, then @racket[R] will raise
+@racket[exn:fail:contract]. If @racket[key->pod] applies @racket[R] to
+in a way that forms a circular dependency, then that application of
+@racket[R] will raise @racket[exn:fail:unlike-assets:cycle].
 
-@item{@racket[(R key)] will return @racket[(hash-ref internal-hash
-key)], or raise @racket[exn:fail:unlike-assets:cycle] if using the
-referenced pod would create a cycle. If the key does not map to a pod,
-then the key will be set to the first @racket[(find-pod key R)] to
-return a pod. @racket[R] may be invoked recursively in any
-@racket[find-pod].}
+@racket[(R)] returns a hash @racket[H] that contains all values and
+known names encountered over the life of the resolver. @racket[H] is
+useful for reviewing visited values, while knowing which keys mapped
+to the same value.
 
-@item{@racket[(R key return?)]: Returns @racket[(or (return? P) (return? (P) ...))],
-where @racket[P] is the @tech{pod} returned from @racket[(R key)]. Useful for
-finding a common value type. Remember that due to the nature of pods, @racket[(R key return?)]
-is non-deterministic.
-}
+@racketblock[
+(R "a") (R "b") (R "c")
+(R) (code:comment "#hash((#<x> . '("a" "b")) (#<y> . '("c")))")
 ]
+}
 
 @defstruct[exn:fail:unlike-assets:cycle ([dependency-key string?] [dependent-keys (listof string)])]{
-An error raised when the resolver encounters a cycle.
+An error raised when a resolver encounters a cycle.
 
-@racket[dependency-key] is the string key used to resolve a pod that exists in @racket[dependent-keys].
+@racket[dependency-key] is the string key for the offending request,
+that already exists in @racket[dependent-keys].
 
-@racket[dependent-keys] is the list of keys used to resolve pods
-leading up to @racket[dependency-key].
-
-The pod with the first key in @racket[dependent-keys] is dependent on
-the pod with the @racket[dependency-key]. Beyond that, the pod with
-the @racket[N]th key in @racket[dependent-keys] is dependent on the
-pod with the @racket[N-1]th key.
+@racket[dependent-keys] is the list of keys used for some resolver
+leading up to @racket[dependency-key], where the first element is the
+most recent request. Formally, the pod with the first key in
+@racket[dependent-keys] is dependent on the pod with key
+@racket[dependency-key]. Beyond that, the pod with the @racket[N]th
+key in @racket[dependent-keys] is dependent on the pod with the
+@racket[N-1]th key.
 }
-
-@defproc[(invert-found [R resolver?]) (hash/c pod? (non-empty-listof string?) #:immutable #t)]{
-Returns a @racket[hasheq] hash that represents the inverse of
-@racket[(R)], meaning each key is a pod and each value is a list
-of keys used to refer to the respective pod.
-}
-
-@defproc[(in-found [R resolver?]
-                   [return? predicate/c pod?]
-                   [keep? (-> any/c (non-empty-listof string?) any/c)
-                   (const #t)]) sequence?]{
-Returns a two-value sequence filtered by @racket[keep?].
-
-The first value is equal to @racket[(R key return?)].
-The second value is a list of all keys that can be used to
-access the first value using @racket[R].
-
-If @racket[return?] is @racket[pod?], then @racket[(R key)] is
-@racket[eq?] to the first sequence value for each @racket[key] in the second.
-Therefore, @racket[(in-found R pod? (const #t))] is equivalent to
-@racket[(in-hash (invert-found (R)))].
-}
-
-
 
 @section{@tt{unlike-assets/resolver/pod}}
 @defmodule[unlike-assets/resolver/pod]
 
-@deftech{Pods} keep Racket values up-to-date, asynchronously.
+Pods keep Racket values up-to-date.
 
-@racketmodname[unlike-assets/resolver/pod] reprovides all bindings
-from @racketmodname[unlike-assets/resolver/fence].
+@racketmodname[unlike-assets/resolver/pod] reprovides all
+bindings from @racketmodname[unlike-assets/resolver/fence].
 
 @defproc[(pod? [v any/c]) boolean?]{
 Returns @racket[#t] if @racket[v] came from @racket[make-pod].
@@ -176,46 +190,34 @@ Returns a procedure @racket[build!] that governs a changing
 value. Initially, that value is @racket[undefined].
 
 @racket[(build!)] starts a build (if needed) and returns a
-@racket[wait-for-result] procedure that does what it says.
-
-Overall, use of a pod looks like this.
+@racket[get-result] procedure that does what it says.
 
 @racketblock[
 (define build! (make-pod ...))
-(define wait-for-result (build!))
-(define result (wait-for-result))
+(define get-result (build!))
+(define result (get-result))
 ]
 
-@racket[(build!)] will apply @racket[make-build] in search of a
-procedure to use to create a singular Racket value.
+@racket[(build!)] applies @racket[make-build] in search of a procedure
+to use to create a singular Racket value. If @racket[make-build]
+returns a procedure, then @racket[build!] will apply that procedure on
+the current thread and cache its value.
 
-If @racket[make-build] returns a procedure, then @racket[build!] will
-run the returned procedure in a new thread.  If a thread is already
-running for the pod, then that thread will be sent a break before
-being replaced. A continuation mark with key @racket['dependent-pods]
-will be set in the dynamic extent of a pod's thread. If @racket['dependent-pods]
-is not mapped to a value, it will be set to @racket[(list key)]. Otherwise,
-it will be set to @racket[(cons key existing-value)].
+If @racket[make-build] returns @racket[#f], then @racket[build!] has
+no side-effects. That is, @racket[(build!)] will still return a
+procedure to get the cached result, but will not replace that result.
 
-If @racket[make-build] returns @racket[#f], then @racket[build!] has no
-side-effects. Specifically, @racket[(build!)] will still return a wait
-procedure, but it will not break any existing build threads, and it
-will not create a new thread.
-
-Here's an example that returns the string contents of a file, where
-@racket[file->string] runs without blocking the current thread, but
-only if the file exists.
+Here's an example that returns the string contents of a file,
+provided the file exists.
 
 @racketblock[
 (define build!
-  (make-pod "foo"
-            (lambda () (and (file-exists? "/home/me/data")
+  (make-pod (lambda () (and (file-exists? "/home/me/data")
                             (lambda () (file->string "/home/me/data"))))))
 ]
 
 The wait procedures returned by @racket[build!] are always
-@racket[eq?], meaning that it's the same procedure. It will always
-return the @italic{latest} result from the build.
+@racket[eq?]. It will always return the @italic{latest} result.
 
 @racketblock[
 (define build! (make-pod "" (const (lambda () (current-seconds)))))
@@ -251,7 +253,6 @@ the pod uses @racket[build] to replace its value.
 (pod key (=* fexp ...) body ...)
 (pod key body ...)
 )]{
-
 Creates a pod with an optional use of @racket[fence].
 
 @racketblock[

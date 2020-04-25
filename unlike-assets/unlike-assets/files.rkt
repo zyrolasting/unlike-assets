@@ -26,7 +26,7 @@
   [file-path->asset (->* (complete-path? complete-path?)
                          (#:mime-type bytes?
                           #:writer (or/c #f (-> output-port? (or/c void? exact-nonnegative-integer?))))
-                         asset/file-to-file/c)]))
+                         asset?)]))
 
 (define default-media #"application/octet-stream")
 

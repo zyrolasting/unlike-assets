@@ -29,13 +29,11 @@
 
 (define/under-policy (write-asset-to-filesystem! a #:exists [exists 'error])
   (define dst (a 'output-file-path))
-  (log-info "Saving asset: ~a" dst)
-  (make-parent-directory* dst)
-  (call-with-output-file #:exists exists
-    dst (a 'write-file)))
+  (dry (make-parent-directory* dst))
+  (dry (call-with-output-file #:exists exists
+         dst (a 'write-file))))
 
 (define/under-policy (write-resolved-to-filesystem! [sys (current-resolver)] #:exists [exists 'error])
-  (log-info "Write resolved")
   (for/fold ([written #hash()])
             ([(a keys) (in-assets (λ (a keys)
                                     (and (complete-path? (a 'output-file-path #f))
@@ -49,12 +47,12 @@
   (define files-written (hash-keys written))
   (define predators (apply set files-written))
   (define habitat
-    (apply set
-           (apply append
-                  (map (λ (path)
-                         (directory-list (path-only path)
-                                         #:build? #t))
-                       files-written))))
+    (for/fold ([aggregate (set)])
+              ([path files-written])
+      (define dir (path-only path))
+      (if (and (not (set-member? aggregate path)) (directory-exists? dir))
+          (set-union aggregate (apply set (directory-list #:build? #t)))
+          aggregate)))
 
   (define prey (set-subtract habitat predators))
   (sequence-for-each (λ (p) (dry (delete-file p)))

@@ -27,9 +27,10 @@
 (define-syntax (asset/c stx)
   (syntax-parse stx
     [(n:id [x:id c:expr] ...+)
-     #'(first-or/c (-> (and/c immutable? hash?))
-                   (->i ([k symbol?])
-                        [result (k) (case k [(x) c] ... [else any/c])]))]))
+     #'(first-or/c
+        (-> (and/c hash? immutable?))
+        (->i ([k symbol?])
+             [result (k) (case k [(x) c] ... [else any/c])]))]))
 
 (define (make-asset h)
   (make-asset-proc
@@ -56,7 +57,16 @@
                  (hash-table ('x x) ...)))])))
 
 (module+ test
-  (require rackunit)
+  (require rackunit
+           racket/format)
+
+  (define-syntax-rule (check-enforced cnt val)
+    (test-exn (~a 'cnt)
+              exn:fail:contract?
+              (λ ()
+                (define/contract (will-fail) cnt val)
+                ((will-fail)))))
+
   (test-case "Construction and reference"
     (define a (asset [a 1] [b 2] [c 3]))
     (check-pred procedure? a)
@@ -78,13 +88,10 @@
                                 (asset [a 3])))
                  #hash((a . a))))
 
-  (test-exn "Contract enforcement"
-            exn:fail:contract?
-            (λ ()
-              (define/contract (will-fail)
-                (-> (asset/c [thunky (-> real?)]))
-                (asset [thunky (λ () "not real")]))
-              ((will-fail))))
+  (test-case "Contract enforcement"
+    (check-enforced
+     (-> (asset/c [thunky (-> real?)]))
+     (asset [thunky (λ () "not real")])))
 
   (test-equal? "Match expansion"
                (list 1 2 3)

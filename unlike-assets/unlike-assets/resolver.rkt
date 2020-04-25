@@ -3,4 +3,4 @@
 "resolver/pod.rkt"
 "resolver/asset.rkt"
 "resolver/fence.rkt"
-"resolver/global.rkt"
+"resolver/default.rkt"

@@ -31,10 +31,10 @@
 (define (make-file-i/o-policy #:dry-run? dry-run?)
   (make-security-guard (current-security-guard)
                        (λ (procedure-symbol path-or-false meta)
-                         (log-file-operation #:level (if dry-run? 'info 'debug)
-                                             procedure-symbol path-or-false meta)
                          (define intended? (make-checker meta))
                          (cond [(intended? 'write 'delete)
+                                (log-file-operation #:level (if dry-run? 'info 'debug)
+                                                    procedure-symbol path-or-false meta)
                                 (when dry-run? (raise (exn:dry-run)))]
                                [(intended? 'execute)
                                 (error "No file executions permitted when saving files.")]

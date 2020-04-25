@@ -11,7 +11,7 @@
                     unlike-assets/resolver
                     unlike-assets/projects]]
 
-@title{Project Definitions}
+@title{Unlike Assets}
 
 @defmodule[unlike-assets/projects]
 

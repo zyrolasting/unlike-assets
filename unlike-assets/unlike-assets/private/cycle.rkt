@@ -10,7 +10,7 @@
          dependent)
 
 (define-struct (exn:fail:unlike-assets:cycle exn:fail)
-  (dependency-key dependents))
+  (dependency dependents))
 
 (define mark-key 'unlike-assets:dependents)
 
@@ -57,7 +57,7 @@
   (define-syntax-rule (expect-cycle expected-dependency-key expected-dependencies body ...)
     (check-exn
      (λ (e) (and (exn:fail:unlike-assets:cycle? e)
-                 (equal? (exn:fail:unlike-assets:cycle-dependency-key e) expected-dependency-key)
+                 (equal? (exn:fail:unlike-assets:cycle-dependency e) expected-dependency-key)
                  (equal? (exn:fail:unlike-assets:cycle-dependents e) expected-dependencies)))
      (λ () body ...)))
 

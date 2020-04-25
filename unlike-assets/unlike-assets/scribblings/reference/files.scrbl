@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@title{@tt{Unlike Asset: File}}
+@title{@tt{unlike-assets/files}}
 
 @require[@for-label[racket/base
                     racket/contract

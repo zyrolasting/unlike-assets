@@ -11,16 +11,17 @@
                     unlike-assets/resolver
                     unlike-assets/projects]]
 
-@title{Unlike Assets}
+@title{@tt{unlike-assets/projects}}
 
 @defmodule[unlike-assets/projects]
 
 @racketmodname[unlike-assets/projects] includes all bindings from
 @racketmodname[unlike-assets/projects/server],
 @racketmodname[unlike-assets/projects/cli], and
-@racketmodname[unlike-assets/projects/distributor].
+@racketmodname[unlike-assets/projects/distributor]. Altogether
+they help you construct an interface for a resolver.
 
-@section{Development Server}
+@section{@tt{Development Server}}
 @defmodule[unlike-assets/projects/server]
 
 This module helps you set up a server that forwards requests to the
@@ -99,10 +100,11 @@ for each applicable file.
 Performs a one-way sync from the assets in @racket[sys] to the host
 filesystem.
 
-@bold{BEWARE:} Like all filesystem syncs, this is a destructive
-operation that generates a lot of disk activity. It also assumes that all
-affected directories are full of disposable files. If this is not
-true, then do not use this procedure. If you do, lean on
+Like all filesystem syncs, this is a destructive operation that may
+entail a lot of disk activity. It also assumes that if any affected
+directory contains files, those files represent out-of-date results
+from the last application of this procedure. If this is not true, then
+do not use this procedure. If you do use this procedure, lean on
 @racket[dry-run?] until you are comfortable with the consequences.
 
 These are the post-conditions:

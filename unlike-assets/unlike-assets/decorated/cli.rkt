@@ -6,9 +6,9 @@
          racket/tcp
          raco/command-name
          "../resolver.rkt"
-         "../files.rkt"
+         "files.rkt"
          "server.rkt"
-         "distributor.rkt")
+         "files/distributor.rkt")
 
 (define (u/a-cli)
   (define port 8080)
@@ -24,6 +24,13 @@
                   (λ () (sync/enable-break never-evt))
                   stop))
 
+  (define (distribute)
+    (displayln "WARNING: Distributing files is a destructive operation.")
+    (displayln "By default, this will perform a dry run.")
+    (displayln "(You can disable this prompt in the future with --yes)")
+    (define disable-dry-run? (confirm "Disable the dry run and distribute the files?"))
+    (sync-filesystem-to-resolved! #:dry-run? (not disable-dry-run?)))
+
   (define (confirm prompt)
     (or yes
         (begin
@@ -34,7 +41,7 @@
             [else #f]))))
 
   (define action
-    (λ () (displayln "No action specified. Run again with -h to see options.")))
+    (λ () (displayln "No action specified. Run with -h for help.")))
 
   (command-line
    #:program (short-program+command-name)
@@ -61,23 +68,14 @@
     (set! action run-server/wait)]
    [("-d" "--distribute")
     "Distribute files"
-    (begin
-      (displayln "WARNING: Distributing files is a destructive operation.")
-      (displayln "By default, this will perform a dry run.")
-      (displayln "(You can disable this prompt in the future with --yes)")
-      (define disable-dry-run? (confirm "Disable the dry run and distribute the files?"))
-      (set! action
-            (λ () (sync-filesystem-to-resolved! #:dry-run? (not disable-dry-run?)))))]
+    (set! action distribute)]
     #:args keys
     (with-logging-to-port
       (current-output-port)
       (λ ()
         (void (with-handlers ([exn:break? (λ _ (displayln "User break"))])
-                (unless (null? keys)
-                  (log-unlike-assets-info "Requesting ~a asset(s)" (length keys)))
-                (map Pw keys)
                 (for ([k (in-list keys)])
-                  (Ps k)
+                  (procure k)
                   (log-unlike-assets-info "Procured ~a" k))
                 (action))))
       #:logger unlike-assets-logger

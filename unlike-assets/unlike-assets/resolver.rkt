@@ -8,8 +8,6 @@
  (all-from-out "private/cycle.rkt")
  (contract-out
   [resolver? predicate/c]
-  [replace-resolver
-   (->* () #:rest (listof (-> any/c resolver? (or/c #f procedure?))) void?)]
   [current-resolver (parameter/c resolver?)]
   [procure (-> any/c (not/c procedure?))]
   [make-resolver
@@ -21,20 +19,6 @@
 
 
 (define-values (make-resolver-proc resolver?) (of-name "resolver"))
-
-(define (aggregate-routes . ps)
-  (if (null? ps)
-      (λ (k r) (error 'u/a "No pod for key: ~a" k))
-      (let ([next (apply aggregate-routes (cdr ps))])
-        (λ (k r)
-          (or ((car ps) k r)
-              (next k r))))))
-
-
-(define (replace-resolver . ps)
-  (current-resolver
-   (make-resolver ((current-resolver))
-                  (apply aggregate-routes ps))))
 
 
 (define (make-resolver table key->proc)
@@ -88,13 +72,6 @@
                 (make-resolver #hash()
                                (λ (key sys) (sys key))))
               (R "A")))
-
-  (test-case "Can aggregate routes"
-    (define n 5)
-    (define route (apply aggregate-routes
-                         (map (λ (i) (λ (k r) (and (eq? k i) i))) (range n))))
-    (for ([j (in-range n)])
-      (check-eq? (route j #f) j)))
 
   (test-case "Resolvers track encountered values"
     (define pA (λ () 'a))

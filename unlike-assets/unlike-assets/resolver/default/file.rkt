@@ -5,7 +5,7 @@
          idiocket/string
          idiocket/file
          idiocket/path
-         "extensions.rkt")
+         "extension.rkt")
 
 (provide
  (contract-out

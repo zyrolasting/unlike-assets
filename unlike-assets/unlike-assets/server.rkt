@@ -14,8 +14,8 @@
  (all-from-out web-server/http/request-structs
                web-server/http/response-structs)
  (contract-out
-  [make-dispatcher (-> resolver? dispatcher/c)]
-  [start-server (->* (resolver?) (#:port listen-port-number?) procedure?)]))
+  [make-dispatcher (-> resolver? (-> url? any/c) dispatcher/c)]
+  [start-server (->* (resolver?) (#:port listen-port-number? (-> url? any/c)) procedure?)]))
 
 (require racket/format
          racket/function
@@ -38,7 +38,7 @@
      (pretty-print val)
      (get-output-string (current-output-port)))))
 
-(define (make-dispatcher resolver)
+(define (make-dispatcher resolver url->key)
   (lifter:make
    (λ (req)
      (with-handlers ([exn? (λ (e) (show 500 (exn->string e)))])
@@ -47,9 +47,9 @@
            ((serveable-make-response result) req)
            (show 200 result))))))
 
-(define (start-server resolver #:port [port 8080])
-  (serve #:dispatch (make-dispatcher resolver)
+(define (start-server resolver [url->key default-url->key] #:port [port 8080])
+  (serve #:dispatch (make-dispatcher resolver url->key)
          #:port port))
 
-(define (url->key u)
+(define (default-url->key u)
   (string-join (map path/param-path (url-path u)) "/"))

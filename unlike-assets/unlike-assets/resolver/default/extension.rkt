@@ -3,6 +3,7 @@
 (require racket/contract)
 (provide define-uninterned-symbols
          define-hasheq-extension
+         fenced-factory
          (all-from-out racket/contract)
          (contract-out [make-fence-thunk (-> (-> any/c) (-> any/c any/c any/c) (-> boolean?))]
                        [make-factory-thunk (-> (-> any/c) (-> any/c) (-> any/c))]))
@@ -22,6 +23,10 @@
     (λ ()
       (when (make?) (set! result (make)))
       result)))
+
+(define-syntax-rule (fenced-factory fence factory)
+  (make-factory-thunk (make-fence-thunk (λ () fence))
+                      (λ () factory)))
 
 (define-syntax (define-uninterned-symbols stx)
   (syntax-parse stx

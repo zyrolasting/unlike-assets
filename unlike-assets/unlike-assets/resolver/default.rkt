@@ -1,2 +1,4 @@
 #lang reprovide
-(glob-in "default/*.rkt")
+"default/extension.rkt"
+"default/file.rkt"
+"default/racket.rkt"

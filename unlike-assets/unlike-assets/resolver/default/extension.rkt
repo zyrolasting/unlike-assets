@@ -1,10 +1,12 @@
 #lang racket/base
 
-(require racket/contract)
+(require racket/contract
+         racket/hash)
 (provide define-uninterned-symbols
          define-hasheq-extension
          fenced-factory
-         (all-from-out racket/contract)
+         (all-from-out racket/contract
+                       racket/hash)
          (contract-out [make-fence-thunk (-> (-> any/c) (-> any/c any/c any/c) (-> boolean?))]
                        [make-factory-thunk (-> (-> any/c) (-> any/c) (-> any/c))]))
 

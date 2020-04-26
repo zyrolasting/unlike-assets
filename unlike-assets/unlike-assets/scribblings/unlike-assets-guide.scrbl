@@ -51,8 +51,8 @@ here.
 @racketmod[u/a
 
 (replace-resolver
-  (file-modules show-stat
-                (within this-directory)))]
+  (file-modules show-file-info
+                (search-within this-directory)))]
 
 This sets up a custom resolver that responds to requests
 for files with stat information.
@@ -103,8 +103,8 @@ Shut down your REPL and edit @tt{project.rkt} like so:
 @racketmod[u/a
 
 (replace-resolver
-  (file-modules show-stat
-                (within this-directory)))
+  (file-modules show-file-info
+                (search-within this-directory)))
 
 (module+ main (u/a-cli))]
 
@@ -166,14 +166,14 @@ Edit your configuration like so:
 
 (replace-resolver
   (file-modules (distribute-to (this-directory/ "dist")
-                               show-stat)
+                               show-file-info)
                 (search-within (this-directory/ "assets"))))
 
 (module+ main (u/a-cli))]
 
 @margin-note{UA has safeguards from contradictory instructions, just in case
 two distributor configurations collide over the same value.}
-Notice that we wrapped @racket[show-stat] in an instruction on how to
+Notice that we wrapped @racket[show-file-info] in an instruction on how to
 handle file modules, rather than replace it outright. This is because
 UA allows you to compose policies on how to handle assets.
 @racket[distribute-to] adds an instruction for the distributor
@@ -211,7 +211,7 @@ mean.
 
 (replace-resolver
   (racket-modules (distribute-to (this-directory/ "dist")
-                                 show-stat)
+                                 show-file-info)
                   (search-within (this-directory/ "assets"))))
 
 (module+ main (u/a-cli))]

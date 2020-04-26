@@ -1,12 +1,11 @@
 #lang racket/base
 
 (provide css-file->asset
-         static-files/css)
+         css-modules)
 
 (require idiocket/file
          racket/path
-         unlike-assets/files
-         unlike-assets/resolver)
+         unlike-assets)
 
 (define (make-css-path output-dir css)
   (path-replace-extension
@@ -19,14 +18,16 @@
 (define (css-file->asset file-path output-dir)
   (define (write-css o)
     (write-bytes (string->bytes/utf-8 (file->string file-path)) o))
-  (file-path->asset file-path
-                    output-dir
-                    #:mime-type #"text/css; charset=utf-8"
-                    write-css))
 
-(define (static-files/css stylesheet-search-dirs output-dir)
-  (static-files (λ (p) (css-file->asset p output-dir))
-                (within-directories (λ (p) (equal? #".css" (path-get-extension p)))
-                                    (if (list? stylesheet-search-dirs)
-                                        stylesheet-search-dirs
-                                        (list stylesheet-search-dirs)))))
+  (hash-union
+   (serveable
+    (response/output #:code 200
+                     #:mime-type #"text/css; charset=utf-8"
+                     write-css))
+   (distributable output-dir write-css)))
+
+
+(define (css-modules stylesheet-search-dirs output-dir)
+  (file-modules (λ (p) (css-file->asset p output-dir))
+                (search-within stylesheet-search-dirs
+                               (λ (p) (equal? #".css" (path-get-extension p))))))

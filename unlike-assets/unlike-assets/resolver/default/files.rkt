@@ -2,7 +2,10 @@
 
 (require unlike-assets/resolver
          racket/contract
-         "resolve.rkt")
+         idiocket/string
+         idiocket/file
+         idiocket/path
+         "extensions.rkt")
 
 (provide
  (contract-out

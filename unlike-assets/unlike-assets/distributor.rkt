@@ -7,7 +7,7 @@
          racket/set
          racket/sequence
          "distributor/security.rkt"
-         "../resolve.rkt")
+         "resolver/default.rkt")
 
 (provide
  (contract-out
@@ -27,7 +27,7 @@
           #:dry-run? any/c)
          void?)]))
 
-(define-private distributable
+(define-hasheq-extension distributable
   [path complete-path?]
   [write-file (-> (or/c void? exact-nonnegative-integer?))])
 

@@ -12,19 +12,12 @@
                     unlike-assets/projects]]
 
 @title{@tt{unlike-assets/projects}}
-
 @defmodule[unlike-assets/projects]
 
-@racketmodname[unlike-assets/projects] includes all bindings from
-@racketmodname[unlike-assets/projects/server],
-@racketmodname[unlike-assets/projects/cli], and
-@racketmodname[unlike-assets/projects/distributor]. Altogether
-they help you construct an interface for a resolver.
+@section{@tt{unlike-assets/server}}
+@defmodule[unlike-assets/server]
 
-@section{@tt{Development Server}}
-@defmodule[unlike-assets/projects/server]
-
-This module helps you set up a server that forwards requests to the
+This module helps you set up a server that forwards requests to an
 asset resolver.
 
 @defthing[asset/serveable/c (asset/c [->http-response (-> request? response?)])]{

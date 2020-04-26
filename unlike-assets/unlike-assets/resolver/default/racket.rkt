@@ -2,7 +2,7 @@
 
 (require racket/contract
          racket/rerequire
-         "resolve.rkt")
+         "extensions.rkt")
 
 (define module-path/c
   (or/c module-path?

@@ -8,3 +8,4 @@
 
 @table-of-contents[]
 @include-section{resolver.scrbl}
+@include-section{resolver-default.scrbl}

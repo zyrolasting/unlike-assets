@@ -1,9 +1,13 @@
 #lang racket/base
 
-(provide (all-defined-out)
-         (all-from-out racket/contract))
-(require racket/contract
-         (for-syntax racket/base
+(require racket/contract)
+(provide define-uninterned-symbols
+         define-hasheq-extension
+         (all-from-out racket/contract)
+         (contract-out [make-fence-thunk (-> (-> any/c) (-> any/c any/c any/c) (-> boolean?))]
+                       [make-factory-thunk (-> (-> any/c) (-> any/c) (-> any/c))]))
+
+(require (for-syntax racket/base
                      racket/syntax
                      syntax/parse))
 
@@ -30,7 +34,7 @@
          (values (string->uninterned-symbol str)
                  ...)))]))
 
-(define-syntax (define-private stx)
+(define-syntax (define-hasheq-extension stx)
   (syntax-parse stx
     [(_ x:id [item:id c:expr] ...)
      (with-syntax ([(arg ...)
@@ -60,7 +64,3 @@
            (define (getter h)
              (hash-ref h item)))
          ...))]))
-
-(define-syntax-rule (factory fence body ...)
-  (make-factory-thunk (make-fence-thunk (λ () fence))
-                      (λ () body ...)))

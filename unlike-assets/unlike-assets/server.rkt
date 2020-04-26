@@ -21,11 +21,11 @@
          racket/function
          racket/string
          web-server/web-server
-         "resolve.rkt"
+         "resolver/default.rkt"
          (prefix-in lifter:
                     web-server/dispatchers/dispatch-lift))
 
-(define-private serveable [make-response (-> request? response?)])
+(define-hasheq-extension serveable [make-response (-> request? response?)])
 
 (define (respond/text code str)
   (response/output #:code code

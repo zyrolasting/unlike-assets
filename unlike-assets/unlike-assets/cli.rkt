@@ -5,10 +5,9 @@
          racket/logging
          racket/tcp
          raco/command-name
-         "../resolver.rkt"
-         "files.rkt"
+         unlike-assets/resolver
          "server.rkt"
-         "files/distributor.rkt")
+         "distributor.rkt")
 
 (define (u/a-cli)
   (define port 8080)

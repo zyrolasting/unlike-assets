@@ -28,6 +28,6 @@
 
 
 (define (css-modules stylesheet-search-dirs output-dir)
-  (file-modules (λ (p) (css-file->asset p output-dir))
-                (search-within stylesheet-search-dirs
-                               (λ (p) (equal? #".css" (path-get-extension p))))))
+  (existing-files (λ (p) (css-file->asset p output-dir))
+                  (search-within stylesheet-search-dirs
+                                 (λ (p) (equal? #".css" (path-get-extension p))))))

@@ -14,7 +14,7 @@
  (contract-out
   [module-path->hasheq (-> module-path/c hash-eq?)]
   [racket-modules (->* ((-> string? (or/c path-string? module-path/c #f)))
-                       ((-> module-path/c hash-eq?))
+                       ((-> module-path/c (not/c procedure?)))
                        procedure?)]))
 
 (define (module-path->hasheq module-path)

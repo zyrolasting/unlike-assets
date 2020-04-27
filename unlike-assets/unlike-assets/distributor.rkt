@@ -7,9 +7,13 @@
          racket/set
          racket/sequence
          "distributor/security.rkt"
-         "resolver/default.rkt")
+         "resolver/extension.rkt")
 
 (provide
+ (hash-partition-out
+  distributable
+  [path complete-path?]
+  [write-file (-> (or/c void? exact-nonnegative-integer?))])
  (contract-out
   [write-asset-to-filesystem!
    (->* (distributable?)
@@ -27,9 +31,7 @@
           #:dry-run? any/c)
          void?)]))
 
-(define-hasheq-extension distributable
-  [path complete-path?]
-  [write-file (-> (or/c void? exact-nonnegative-integer?))])
+(hash-partition distributable (path write-file))
 
 (define/under-policy (write-asset-to-filesystem! a #:exists [exists 'error])
   (define dst (distributable-path a))

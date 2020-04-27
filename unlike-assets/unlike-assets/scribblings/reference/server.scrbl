@@ -17,18 +17,13 @@
 @defmodule[unlike-assets/server]
 
 This module helps you set up a prototyping server that forwards
-requests to an asset resolver. This module reprovides all bindings
+requests to a @tech{resolver}. This module reprovides all bindings
 from @racketmodname[web-server/http/request-structs] and
 @racketmodname[web-server/http/response-structs].
 
 Do not use this server on production systems.
 
 @defextension[serveable [make-response (-> request? response?)]]
-
-
-@defproc[(default-url->key [u url?]) string?]{
-Equivalent to @racket[(string-join (map path/param-path (url-path u)) "/")].
-}
 
 @defproc[(make-dispatcher [R resolver?] [url->key (-> url any/c)]) dispatcher/c]{
 Creates a dispatcher that responds to requests using @racket[serveable]
@@ -56,4 +51,11 @@ Starts a development server using @racket[(make-dispatcher R url->key)]
 on the given port.
 
 Returns a procedure that, when applied, stops the server.
+}
+
+@defproc[(default-url->key [u url?]) string?]{
+Equivalent to @racket[(string-join (map path/param-path (url-path u))
+"/")].  When used with @racket[make-dispatcher] or
+@racket[start-server], a GET for @tt{/index.html?blah=1} is equivalent
+to evaluating @racket[(R "index.html")].
 }

@@ -4,8 +4,6 @@
 racket/base
 racket/rerequire
 unlike-assets
-unlike-assets/resolver/default/racket
-unlike-assets/cli
 u/a]]
 
 @title{Unlike Assets: Guide}

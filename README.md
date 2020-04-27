@@ -41,15 +41,12 @@ All you have to do is evaluate the dependent expression again.
 ```
 
 ## What's Here?
-This repository tracks a contained ecosystem of packages. It all
-starts in `unlike-assets`, which provides a configurable module
-resolver that asynchronously maps string URLs to up-to-date Racket
-values.
+This repository tracks a contained ecosystem of packages centered
+around `unlike-assets`. Developers can use it to define a configurable
+module resolver, or use the default one that comes with it.
 
-By default, the resolver does nothing. The other packages extend
-the resolver to understand different data formats. One goal of
-of this project is to add new formats over time, but you are
-not limited to the packages available here.
+The other packages include extensions with additional dependencies,
+which is why they are not installed by default.
 
 ## WTF is with this filesystem?
 **Short answer**: Racket made me do it.

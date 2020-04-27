@@ -12,14 +12,14 @@ Like @racket[build-path], except the first element of the path
 is the directory of the file in which this expression appears.
 
 If used in a location where a directory cannot be inferred (such as a REPL),
-then the path is build in terms of @racket[(current-directory)].
+then the path is built in terms of @racket[(current-directory)].
 }
 
 
 @defform*[((nearest-u/a) (nearest-u/a file-name))]{
 
 When used in @racket[require], this will search for the nearest
-@litchar{#lang u/a} file. First the directory in which this expression
+@litchar{#lang u/a} file. The directory in which this expression
 appears is searched, followed by all readable parent directories.
 
 The first form, lacking a file name for a hint, will check all

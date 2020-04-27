@@ -25,4 +25,5 @@
          (defproc (predicate (h hash-eq?)) boolean?)
          (defproc (x [arg c] ...) predicate)
          (defproc (getter (h predicate)) c) ...
-         } "Defines the object format used by this extension."))]))
+         } "An interface to the " (tech #:doc '(lib "hash-partition/scribblings/hash-partition.scrbl")
+                                "hash partition") " used by this extension."))]))

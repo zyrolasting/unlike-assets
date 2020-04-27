@@ -2,30 +2,31 @@
 
 (require racket/contract
          racket/exn
+         racket/format
+         racket/function
          racket/pretty
+         racket/string
          racket/tcp
          net/url
+         unlike-assets/resolver
+         web-server/dispatchers/dispatch
          web-server/http/request-structs
          web-server/http/response-structs
-         web-server/dispatchers/dispatch
-         unlike-assets/resolver)
+         web-server/web-server
+         "resolver/extension.rkt"
+         (prefix-in lifter:
+                    web-server/dispatchers/dispatch-lift))
 
 (provide
  (all-from-out web-server/http/request-structs
                web-server/http/response-structs)
+ (hash-partition-out serveable
+                     [make-response (-> request? response?)])
  (contract-out
   [make-dispatcher (-> resolver? (-> url? any/c) dispatcher/c)]
   [start-server (->* (resolver?) (#:port listen-port-number? (-> url? any/c)) procedure?)]))
 
-(require racket/format
-         racket/function
-         racket/string
-         web-server/web-server
-         "resolver/default.rkt"
-         (prefix-in lifter:
-                    web-server/dispatchers/dispatch-lift))
-
-(define-hasheq-extension serveable [make-response (-> request? response?)])
+(hash-partition serveable (make-response))
 
 (define (respond/text code str)
   (response/output #:code code

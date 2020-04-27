@@ -4,5 +4,6 @@
 (define deps '("base"
                "idiocket"
                "reprovide-lang-lib"
+               "hash-partition"
                "search-upward"
                "web-server-lib"))

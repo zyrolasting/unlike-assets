@@ -9,13 +9,15 @@
  (contract-out
   [resolver? predicate/c]
   [current-resolver (parameter/c resolver?)]
-  [procure (-> any/c (not/c procedure?))]
+  [current-rewriter (parameter/c (-> any/c any/c))]
+  [procure/weak (-> any/c (-> any/c))]
+  [procure (-> any/c any/c)]
   [make-resolver
    (-> (hash/c procedure? (non-empty-listof any/c))
        (-> any/c resolver? (-> any/c))
        (and/c resolver?
               (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
-                      (-> any/c (not/c procedure?)))))]))
+                      (-> any/c (-> any/c)))))]))
 
 
 (define-values (make-resolver-proc resolver?) (of-name "resolver"))
@@ -28,10 +30,9 @@
 
   (define (resolve key)
     (dependent key
-      (apply-until
-       (hash-ref! known
-                  key
-                  (λ () (key->proc key R))))))
+               (hash-ref! known
+                          key
+                          (λ () (key->proc key R)))))
 
   (define (get-manifest)
     (for/fold ([h #hash()]) ([(k p) (in-hash known)])
@@ -45,14 +46,19 @@
 
   R)
 
+(define (procure/weak key)
+  ((current-resolver) ((current-rewriter) key)))
+
 (define (procure key)
-  ((current-resolver) key))
+  ((procure/weak key)))
 
 (define current-resolver
   (make-parameter
    (make-resolver #hash()
                   (λ (k sys)
                     (error "Use u/a to implement a resolver")))))
+
+(define current-rewriter (make-parameter values))
 
 (module+ test
   (require rackunit

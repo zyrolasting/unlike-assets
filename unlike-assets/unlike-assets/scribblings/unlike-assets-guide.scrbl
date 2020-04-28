@@ -18,19 +18,22 @@ Imagine if Racket allowed this, and it did what you meant.
 
 This is basically what Unlike Assets (UA) does.
 
-@racketblock[(procure "/path/to/script.js")]
+@racketblock[(hash-ref (procure "/path/to/script.js") 'minified)]
 
-More specifically, UA offers a programmable resolver that does not
-have to comply with the restrictions imposed by Racket's module
-resolver. The tradeoffs work towards the end of helping Racketeers
-set up their own workflow for creative projects.
-
-In that sense, UA as a project abstracts over creative frameworks.
+The @racket[procure] procedure alone is not exciting or magical, but
+UA as a project includes extensions that allow you to treat CSS, SVG,
+JavaScript, and other resources as if they were software modules. The
+tradeoffs made in UA are towards the end of helping Racketeers set up
+their own workflow for creative projects. In that sense, UA abstracts
+over creative frameworks.
 
 Here I will cover configuration and use of the default resolver
 without any optional packages. Once you are accustomed to programming
-your own resolver, see @other-doc['(lib "unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")]
-
+your own resolver, you can expand to other @tt{unlike-assets-*}
+package and install them with in your own resolver. After reading
+this guide, see
+@other-doc['(lib
+"unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")].
 
 @section{Setup}
 Let's start by installing the Unlike Assets package and writing a
@@ -49,7 +52,7 @@ here.
 @racketmod[u/a
 
 (replace-resolver
-  (file-modules show-file-info
+  (existing-files show-file-info
                 (search-within this-directory)))]
 
 This sets up a custom resolver that responds to requests
@@ -101,7 +104,7 @@ Shut down your REPL and edit @tt{project.rkt} like so:
 @racketmod[u/a
 
 (replace-resolver
-  (file-modules show-file-info
+  (existing-files show-file-info
                 (search-within this-directory)))
 
 (module+ main (u/a-cli))]
@@ -163,9 +166,9 @@ Edit your configuration like so:
 @racketmod[u/a
 
 (replace-resolver
-  (file-modules (distribute-to (this-directory/ "dist")
-                               show-file-info)
-                (search-within (this-directory/ "assets"))))
+  (existing-files (distribute-to (this-directory/ "dist")
+                                show-file-info)
+                  (search-within (this-directory/ "assets"))))
 
 (module+ main (u/a-cli))]
 
@@ -274,6 +277,6 @@ If you want to see UA grow with more neat features, then please
 consider
 @hyperlink["https://github.com/sponsors/zyrolasting"]{sponsoring my
 work}. I count on my users for support so that I can continue making
-free and open source libraries for the public good.
+free and open source libraries for everyone.
 
 Thank you.

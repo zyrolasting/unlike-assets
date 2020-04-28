@@ -14,7 +14,8 @@ present itself as a Racket value via @racket[procure].
 
 In the context of this module, a @deftech{resolver} is a procedure
 that cooperates with a surjective mapping of Racket values to
-thunks. A resolved value is, however, a non-procedure.
+thunks. The thunks are meant to return the latest version
+of a value.
 
 Resolvers in the wild normally understand protocols, search
 directories, and other conventions. The resolvers defined here have no
@@ -30,7 +31,7 @@ Returns @racket[#t] if @racket[v] came from @racket[make-resolver].
                                (case-> (-> (hash/c procedure?
                                                    (non-empty-listof string?)
                                                    #:immutable #t))
-                                       (-> any/c (not/c procedure?))))]{
+                                       (-> any/c (-> any/c))))]{
 Returns a procedure @racket[R] that encapsulates a mutable cache based
 on @racket[known]. @racket[R]'s behavior depends on the number of
 provided arguments.
@@ -44,8 +45,8 @@ provided arguments.
 (R) (code:comment "#hash((#<procedure:x> . '(\"a\" \"b\")) (#<procedure:y> . '(\"c\")))")
 ]
 
-In this example, @racket[(R "a")] and @racket[(R "b")] will both apply
-@racket[x] to compute a value.
+In this example, the hash tells us that @racket[(R "a")] and
+@racket[(R "b")] will both return @racket[x].
 
 You can create a new resolver based on another resolver's cache using
 the following pattern:
@@ -58,21 +59,9 @@ Reclaiming memory entails discarding resolver references as well
 as resolved value references before a garbage collection pass.
 
 @racket[(R key)] caches @racket[(key->thunk key R)], if it has not
-already done so. The return value is computed as follows:
-
-@racketblock[
-(let loop ([p cached-procedure])
-  (if (procedure? p)
-      (loop (p))
-      p))
-]
-
-This accounts for the degrees of seperation between an abstract,
-dependent value and a concrete, independent value. A user can
-therefore model resources as chains of thunks.
-
-If @racket[key->thunk] does not return a procedure, then
-@racket[R] will raise @racket[exn:fail:contract].
+already done so. It will then return that value. If
+@racket[key->thunk] does not return a procedure, then @racket[R] will
+raise @racket[exn:fail:contract].
 
 If @racket[key->thunk] applies @racket[R] in a way that forms a
 circular dependency, then that application of @racket[R] will raise
@@ -87,7 +76,7 @@ requested key using @racket[equal?]. In that case, @racket[(R
 "page?a=1&b=2")] will not terminate if @racket[key->thunk]
 recursively applies @racket[R] to @racket{page?b=2&a=1}. You can
 rectify this by restricting the keyspace in your implementation, or
-rewriting ambiguous keys with a surjective function.
+rewriting ambiguous keys with a surjective function (See @racket[current-rewriter]).
 
 @racketblock[
 (define resolver (make-resolver ...))
@@ -107,7 +96,7 @@ a path.
 
 A more sensible implementation of @racket[key->thunk] would return
 a procedure with caching behaviors, likely with some measure of change
-detection.
+detection (e.g. @racket[fenced-factory]).
 }
 
 @defstruct[exn:fail:unlike-assets:cycle ([dependency any/c] [dependents list?])]{
@@ -125,10 +114,23 @@ the @racket[N]th element in @racket[dependents] depends on the
 }
 
 @defthing[current-resolver (parameter/c resolver?)]{
-A global instance of a resolver used by @racket[procure]. The default
+A global instance of a resolver used by @racket[procure/weak]. The default
 value is a resolver that raises an error asking for an implementation.
 }
 
-@defproc[(procure [key any/c]) (not/c procedure?)]{
-Equivalent to @racket[((current-resolver) key)].
+@defthing[current-rewriter (parameter/c (-> any/c any/c))]{
+A global instance of a rewrite procedure used by @racket[procure/weak]. The default
+value is the identity function.
+}
+
+@defproc[(procure/weak [key any/c]) (-> any/c)]{
+Equivalent to @racket[((current-resolver) ((current-rewriter) key))].
+
+@racket[procure/weak] is useful for populating a resolver's cache
+without forcing the current process to compute a value. A circular
+dependency will still raise @racket[exn:fail:unlike-assets:cycle].
+}
+
+@defproc[(procure [key any/c]) any/c]{
+Equivalent to @racket[((procure/weak key))].
 }

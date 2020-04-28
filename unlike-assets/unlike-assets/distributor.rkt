@@ -52,11 +52,13 @@
           (set-union aggregate (apply set (directory-list dir #:build? #t)))
           aggregate)))
   (define prey (set-subtract habitat predators))
+  (log-unlike-assets-info "Deleting ~a" (set->list prey))
   (sequence-for-each (λ (p) (dry (delete-directory/files p)))
                      (in-set prey)))
 
 (define (write-distributable-to-filesystem! d)
   (define dst (distributable-path d))
+  (log-unlike-assets-info "Writing ~a: ~a" dst (dry-run-enabled))
   (dry (make-parent-directory* dst))
   (dry (call-with-output-file #:exists 'truncate/replace
          dst (distributable-write-file d))))
@@ -93,6 +95,6 @@
 
 (define-syntax-rule (dry b ...)
   (parameterize ([current-security-guard
-                  (if dry-run-enabled enforce-dry-run (current-security-guard))])
+                  (if (dry-run-enabled) enforce-dry-run (current-security-guard))])
     (with-handlers ([exn:dry-run? void])
       b ...)))

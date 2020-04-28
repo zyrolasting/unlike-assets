@@ -7,3 +7,4 @@
 "server.rkt"
 "cli.rkt"
 "config.rkt"
+"logging.rkt"

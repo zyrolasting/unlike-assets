@@ -1,11 +1,12 @@
 #lang racket/base
 
-(require racket/contract)
+(require racket/contract
+         "logging.rkt")
 (provide nearest-u/a
          this-directory/
          (contract-out
           [replace-resolver
-           (->* () #:rest (listof (-> any/c resolver? (or/c #f procedure?))) void?)]))
+           (->* () #:rest (listof (-> any/c resolver? (or/c #f (-> (not/c procedure?))))) void?)]))
 
 (require racket/require-syntax
          unlike-assets/resolver
@@ -15,13 +16,10 @@
                      syntax/location
                      search-upward))
 
-(define (aggregate-routes . ps)
-  (if (null? ps)
-      (λ (k r) (error 'u/a "No pod for key: ~a" k))
-      (let ([next (apply aggregate-routes (cdr ps))])
-        (λ (k r)
-          (or ((car ps) k r)
-              (next k r))))))
+(define (aggregate-routes . options)
+  (λ (k r)
+    (or (ormap (λ (p) (p k r)) options)
+        (error 'u/a "No thunk for key: ~a" k))))
 
 (define (replace-resolver . ps)
   (current-resolver

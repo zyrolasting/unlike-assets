@@ -6,38 +6,24 @@
          racket/tcp
          raco/command-name
          unlike-assets/resolver
+         "logging.rkt"
          "server.rkt"
          "distributor.rkt")
 
 (define (u/a-cli)
   (define port 8080)
   (define level 'info)
-  (define yes #f)
-  (define-logger unlike-assets)
 
   (define (run-server/wait)
     (printf "Listening on port ~a~n" port)
     (displayln "Stop the server with ^C")
-    (define stop (start-server #:port port))
+    (define stop (start-server (current-resolver) #:port port))
     (dynamic-wind void
                   (λ () (sync/enable-break never-evt))
                   stop))
 
   (define (distribute)
-    (displayln "WARNING: Distributing files is a destructive operation.")
-    (displayln "By default, this will perform a dry run.")
-    (displayln "(You can disable this prompt in the future with --yes)")
-    (define disable-dry-run? (confirm "Disable the dry run and distribute the files?"))
-    (sync-filesystem-to-resolved! #:dry-run? (not disable-dry-run?)))
-
-  (define (confirm prompt)
-    (or yes
-        (begin
-          (printf "~a [y/N]: " prompt)
-          (flush-output)
-          (case (read-char)
-            [(#\y #\Y) #t]
-            [else #f]))))
+    (sync-filesystem-to-resolver-cache!))
 
   (define action
     (λ () (displayln "No action specified. Run with -h for help.")))
@@ -55,9 +41,9 @@
       (if (listen-port-number? n)
           (set! port n)
           (error 'unlike-assets "Invalid port: ~a" n)))]
-   [("-y" "--yes")
-    "Answer yes to any prompts."
-    (set! yes #t)]
+   [("-n" "--no-dry-run")
+    "Disable dry run."
+    (dry-run-enabled #f)]
    [("-v" "--verbose")
     "Show debug level logs"
     (set! level 'debug)]

@@ -4,7 +4,7 @@
                     racket/contract
                     unlike-assets/resolver]]
 
-@title{@tt{unlike-assets/resolver}}
+@title{Defining Resolvers}
 @defmodule[unlike-assets/resolver]
 
 This module helps you write dynamic variants of @racket[require]. That

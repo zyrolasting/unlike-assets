@@ -4,7 +4,7 @@
                     racket/contract
                     unlike-assets]]
 
-@title{@tt{unlike-assets/config}}
+@title{Project Configuration}
 @defmodule[unlike-assets/config]
 
 @defform[(this-directory/ path-el ...)]{
@@ -15,9 +15,7 @@ If used in a location where a directory cannot be inferred (such as a REPL),
 then the path is built in terms of @racket[(current-directory)].
 }
 
-
 @defform*[((nearest-u/a) (nearest-u/a file-name))]{
-
 When used in @racket[require], this will search for the nearest
 @litchar{#lang u/a} file. The directory in which this expression
 appears is searched, followed by all readable parent directories.

@@ -13,9 +13,9 @@ For a friendly introduction, see @other-doc['(lib "unlike-assets/scribblings/unl
 @table-of-contents[]
 @include-section{resolver.scrbl}
 @include-section{resolver-extension.scrbl}
+@include-section{config.scrbl}
+@include-section{u-a.scrbl}
 @include-section{resolver-file.scrbl}
 @include-section{resolver-racket.scrbl}
-@include-section{u.scrbl}
-@include-section{config.scrbl}
 @include-section{server.scrbl}
 @include-section{distributor.scrbl}

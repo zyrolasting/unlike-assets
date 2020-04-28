@@ -1,15 +1,15 @@
 #lang racket/base
 
-(provide defextension
+(provide defhashpartition
          (all-from-out scribble/manual))
 (require scribble/manual
          (for-syntax racket/base
                      racket/syntax
                      syntax/parse))
 
-(define-syntax (defextension stx)
+(define-syntax (defhashpartition stx)
   (syntax-parse stx
-    [(_ x:id [item:id c:expr] ...)
+    [(_ (x:id [item:id c:expr] ...) children ...)
      (with-syntax ([(arg ...)
                     (map (λ (to-id)
                            (format-id to-id "~a-val" (syntax-e to-id)))
@@ -25,5 +25,4 @@
          (defproc (predicate (h hash-eq?)) boolean?)
          (defproc (x [arg c] ...) predicate)
          (defproc (getter (h predicate)) c) ...
-         } "An interface to the " (tech #:doc '(lib "hash-partition/scribblings/hash-partition.scrbl")
-                                "hash partition") " used by this extension."))]))
+         } children ...))]))

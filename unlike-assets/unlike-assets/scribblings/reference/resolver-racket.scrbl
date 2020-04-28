@@ -6,7 +6,7 @@
                     unlike-assets/resolver
                     unlike-assets/resolver/racket]]
 
-@title{@tt{unlike-assets/resolver/racket}}
+@title{Racket Modules as Resolved Values}
 @defmodule[unlike-assets/resolver/racket]
 
 @defthing[module-path/c

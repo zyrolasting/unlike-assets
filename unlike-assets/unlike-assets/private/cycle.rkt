@@ -3,7 +3,8 @@
 (require idiocket/function
          racket/list
          racket/set
-         racket/string)
+         racket/string
+         "../logging.rkt")
 
 (provide (struct-out exn:fail:unlike-assets:cycle)
          make-exn:fail:unlike-assets:cycle
@@ -36,14 +37,17 @@
           dependents)))
 
 (define (add-dependent key)
-  (cons key (or (continuation-mark-set-first
-                 (current-continuation-marks)
-                 mark-key)
-                null)))
+  (define dependents
+    (cons key (or (continuation-mark-set-first
+                   (current-continuation-marks)
+                   mark-key)
+                  null)))
+  (log-unlike-assets-debug "dependents: ~v" dependents)
+  dependents)
 
 (define (enter-dependent-section key proc)
   (let ([dependents (get-dependents)])
-    (when (in-cycle? key dependents )
+    (when (in-cycle? key dependents)
       (raise-cycle-error key dependents))
     (with-continuation-mark mark-key (add-dependent key)
       (proc))))

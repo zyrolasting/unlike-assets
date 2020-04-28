@@ -13,7 +13,7 @@
                     unlike-assets]
                     "macros.rkt"]
 
-@title{@tt{unlike-assets/server}}
+@title{Development Server}
 @defmodule[unlike-assets/server]
 
 This module helps you set up a prototyping server that forwards
@@ -23,7 +23,10 @@ from @racketmodname[web-server/http/request-structs] and
 
 Do not use this server on production systems.
 
-@defextension[serveable [make-response (-> request? response?)]]
+@defhashpartition[(serveable [make-response (or/c response? (-> request? response?))])]{
+A @tech[#:doc '(lib "hash-partition/scribblings/hash-partition.scrbl")]{hash partition}
+that defines Racket values exclusive to the development server.
+}
 
 @defproc[(make-dispatcher [R resolver?] [url->key (-> url any/c)]) dispatcher/c]{
 Creates a dispatcher that responds to requests using @racket[serveable]

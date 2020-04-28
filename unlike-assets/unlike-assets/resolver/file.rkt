@@ -10,12 +10,15 @@
 (provide
  (contract-out
   [get-file-info (-> (and/c complete-path? file-exists?) hash-eq?)]
-  [search-within  (or/c pathy/c
-                        (non-empty-listof pathy/c)
-                        (-> pathy/c (or/c #f complete-path?)))]
-  [existing-files (->* ((-> complete-path? (not/c procedure?))
-                        (-> any/c (or/c #f complete-path?)))
-                       (-> any/c (or/c #f (-> (not/c procedure?)))))]))
+  [search-within  (->* ((or/c pathy/c
+                              (non-empty-listof pathy/c)))
+                       ((-> pathy/c any/c))
+                       (-> pathy/c (or/c #f complete-path?)))]
+  [existing-files (-> (-> complete-path? any/c)
+                      (-> any/c (or/c #f complete-path?))
+                      (-> any/c
+                          resolver?
+                          (or/c #f (-> (not/c procedure?)))))]))
 
 (define (search-within search-dirs [match? file-exists?])
   (within-directories file-exists? search-dirs))

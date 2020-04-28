@@ -5,7 +5,7 @@
                     racket/function
                     unlike-assets]]
 
-@title{@tt{unlike-assets/resolver/file}}
+@title{Files as Resolved Values}
 @defmodule[unlike-assets/resolver/file]
 
 @defproc[(get-file-info [path (and/c complete-path? file-exists?)]) hash-eq?]{
@@ -21,13 +21,12 @@ Returns:
         'file-or-directory-modify-seconds
         (file-or-directory-modify-seconds path))]
 
-Useful for verifying a @racket[file-modules] configuration.
+Useful for verifying an @racket[existing-files] configuration.
 }
 
 @defproc[(existing-files [on-changed-file (-> (and/c complete-path? file-exists?) (not/c procedure?))]
                          [key->maybe-complete-path (-> any/c (or/c #f complete-path?))])
-                         (-> any/c (or/c #f (-> (not/c procedure?))))]
-         procedure?]{
+                         (-> any/c (or/c #f (-> (not/c procedure?))))]{
 Returns a procedure @racket[P] suitable for use in
 @racket[replace-resolver] as an extension. @racket[P] represents a
 set of existing files.

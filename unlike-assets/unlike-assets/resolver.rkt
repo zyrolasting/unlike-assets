@@ -15,11 +15,10 @@
        (-> any/c resolver? (-> any/c))
        (and/c resolver?
               (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
-                      (-> any/c procedure?))))]))
+                      (-> any/c (not/c procedure?)))))]))
 
 
 (define-values (make-resolver-proc resolver?) (of-name "resolver"))
-
 
 (define (make-resolver table key->proc)
   (define known

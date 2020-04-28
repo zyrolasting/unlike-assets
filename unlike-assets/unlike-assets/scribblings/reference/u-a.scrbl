@@ -1,10 +1,11 @@
 #lang scribble/manual
 
 @require[@for-label[racket/base
+                    racket/contract
                     unlike-assets]]
 
-@title{@tt{u/a}}
-@defmodule[@racketfont{u/a} #:lang #:module-paths (u/a/lang/reader)]
+@title{Configuration Language}
+@defmodulelang[@racketfont{u/a} #:module-paths (u/a/lang/reader)]
 
 The @tt{u/a} configuration language is
 @racketmodname[racket/base] with all bindings from

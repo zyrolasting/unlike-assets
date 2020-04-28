@@ -1,7 +1,9 @@
 #lang racket/base
 
 (provide css-file->asset
-         css-modules)
+         css-string->asset
+         css-modules
+         make-css-path)
 
 (require idiocket/file
          racket/path
@@ -15,17 +17,20 @@
                                                  css)))
    #".css"))
 
-(define (css-file->asset file-path output-dir)
+(define (css-string->asset css output-dir)
   (define (write-css o)
-    (write-bytes (string->bytes/utf-8 (file->string file-path)) o))
+    (write-bytes (string->bytes/utf-8 css) o))
 
   (hash-union
    (serveable
     (response/output #:code 200
                      #:mime-type #"text/css; charset=utf-8"
                      write-css))
-   (distributable output-dir write-css)))
+   (distributable (make-css-path output-dir css)
+                  write-css)))
 
+(define (css-file->asset file-path output-dir)
+  (css-string->asset (file->string file-path) output-dir))
 
 (define (css-modules stylesheet-search-dirs output-dir)
   (existing-files (λ (p) (css-file->asset p output-dir))

@@ -2,6 +2,7 @@
 
 (require racket/contract
          racket/rerequire
+         "../resolver.rkt"
          "extension.rkt")
 
 (define module-path/c
@@ -13,9 +14,9 @@
  module-path/c
  (contract-out
   [module-path->hasheq (-> module-path/c hash-eq?)]
-  [racket-modules (->* ((-> string? (or/c path-string? module-path/c #f)))
+  [racket-modules (->* ((-> string? (or/c module-path/c #f)))
                        ((-> module-path/c (not/c procedure?)))
-                       procedure?)]))
+                       (-> any/c resolver? (or/c #f (-> (not/c procedure?)))))]))
 
 (define (module-path->hasheq module-path)
   (dynamic-require module-path #f)

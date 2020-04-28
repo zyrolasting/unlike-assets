@@ -6,7 +6,7 @@
                     unlike-assets
                     unlike-assets/resolver/extension]]
 
-@title{@tt{unlike-assets/resolver/extension}}
+@title{Extending Resolvers}
 @defmodule[unlike-assets/resolver/extension]
 
 This module reprovides @racketmodname[hash-partition],
@@ -28,7 +28,7 @@ provides @racket[fenced-factory] as a caching pattern that works well
 with resolvers.
 
 Built-in extensions meet the latter two goals with @tech[#:doc '(lib
-"hash-partition/scribblings/hash-partition.scrbl")] {hash partitions}.
+"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}.
 You are not required to use hashes for your own extensions, but you
 must use extensions as per their instructions.
 

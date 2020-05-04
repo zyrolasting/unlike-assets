@@ -41,29 +41,22 @@ where @racket[prev] is either @racket[initial] or the value of a prior
 
 Goes well with @racket[(make-factory-thunk)].
 
-Equivalent to:
-
-@racketblock[
-(let ([cache initial])
-  (λ ([next (make)])
-    (begin0 (not (same? cache next))
-      (set! cache next))))]
 }
 
 @defproc[(make-factory-thunk [make? (-> any/c)] [make (-> any/c)]) (-> any/c)]{
-Returns a procedure that either caches a new value, or returns the
-cached value. The cache is hit when @racket[(make?)] is @racket[#f].
+Returns a thunk that optionally caches a value before returning the
+value in the cache.
+
+When applied, the thunk will apply @racket[make] to update the cache
+if the cache has never been updated, or if @racket[(make?)]
+is a true value.
+
+This implies that if @racket[(make)] aborts before updating the cache
+for the first time, a later application of the thunk will apply
+@racket[make] again regardless of the value of @racket[(make?)].
 
 Goes well with @racket[(make-fence-thunk)]. A factory thunk is useable
 as a return value for @racket[key->thunk] in a @tech{resolver}.
-
-Equivalent to:
-
-@racketblock[
-(let ([result #f])
-  (λ ()
-    (when (make?) (set! result (make)))
-    result))]
 }
 
 @defform[(fenced-factory fence factory)]{

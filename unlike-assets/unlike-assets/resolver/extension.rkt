@@ -20,11 +20,19 @@
       (begin0 (not (same? cache next))
         (set! cache next)))))
 
-(define (make-factory-thunk make? make)
-  (let ([result #f])
-    (λ ()
-      (when (make?) (set! result (make)))
-      result)))
+(define make-factory-thunk
+  (let ([initial (string->uninterned-symbol "initial")])
+    (procedure-rename
+     (λ (make? make)
+       (let ([result initial])
+         (λ ()
+           ; Make sure (make?) runs regardless,
+           ; so that things like dynamic-rerequire can run.
+           (define proceed? (make?))
+           (when (or (eq? result initial) proceed?)
+             (set! result (make)))
+           result)))
+     'make-factory-thunk)))
 
 (define (make-resolver-thunk make? make)
   (λ (k r) (and (make? k r) (make k r))))

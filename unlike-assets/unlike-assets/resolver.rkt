@@ -29,10 +29,11 @@
       h))
 
   (define (resolve key)
-    (dependent key
-               (hash-ref! known
-                          key
-                          (λ () (key->proc key R)))))
+    (hash-ref! known
+               key
+               (λ ()
+                 (define th (key->proc key R))
+                 (λ () (dependent key (th))))))
 
   (define (get-manifest)
     (for/fold ([h #hash()]) ([(k p) (in-hash known)])

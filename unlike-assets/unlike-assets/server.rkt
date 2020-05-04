@@ -43,7 +43,7 @@
   (lifter:make
    (λ (req)
      (with-handlers ([exn? (λ (e) (respond/text 500 (exn->string e)))])
-       (define result (resolver (url->key (request-uri req))))
+       (define result ((resolver (url->key (request-uri req)))))
        (if (serveable? result)
            (let ([maybe-resp (serveable-make-response result)])
              (if (response? maybe-resp)

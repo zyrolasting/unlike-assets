@@ -2,7 +2,9 @@
 
 @require[@for-label[racket/base
                     racket/contract
-                    unlike-assets/resolver]]
+                    racket/file
+                    unlike-assets/resolver
+                    unlike-assets/resolver/extension]]
 
 @title{Defining Resolvers}
 @defmodule[unlike-assets/resolver]
@@ -65,18 +67,18 @@ raise @racket[exn:fail:contract].
 
 If @racket[key->thunk] applies @racket[R] in a way that forms a
 circular dependency, then that application of @racket[R] will raise
-@racket[exn:fail:unlike-assets:cycle]. Every application of @racket[R]
-to some @racket[k] takes place in a continuation marked with key values.
+@racket[exn:fail:unlike-assets:cycle].
 
-The burden is on you to ensure that your keyspace consists of unique
-values, and to define caching rules. A resolver will not understand if
-a dependency between @racket{page?a=1&b=2} and @racket{page?b=2&a=1}
-would form a cycle, because it compares unresolved dependencies to a
-requested key using @racket[equal?]. In that case, @racket[(R
-"page?a=1&b=2")] will not terminate if @racket[key->thunk]
-recursively applies @racket[R] to @racket{page?b=2&a=1}. You can
-rectify this by restricting the keyspace in your implementation, or
-rewriting ambiguous keys with a surjective function (See @racket[current-rewriter]).
+
+Every application of @racket[R] to some @racket[k] takes place in a
+continuation marked with the keys of unresolved dependents.  Those
+keys are compared using @racket[equal?] to detect cycles. The burden
+is on you to ensure that your keyspace consists of unique values,
+because a resolver will not understand if a dependency between
+@racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
+cycle. You can rectify this by rewriting ambiguous keys with a
+surjective function as shown below, or by setting
+@racket[current-rewriter].
 
 @racketblock[
 (define resolver (make-resolver ...))
@@ -85,10 +87,10 @@ rewriting ambiguous keys with a surjective function (See @racket[current-rewrite
 (resolver (disambiguate k))
 ]
 
-The burden is on you to define caching rules for procedures returned
-by @racket[key->thunk]. The following resolver is wasteful because
-it reads a file into memory for every application of @racket[R] to
-a path.
+A resolver only caches thunks returned by @racket[key->thunk], not the
+values those thunks return. The following resolver is wasteful because
+it reads a file into memory for every application of @racket[R] to a
+path.
 
 @racketblock[
 (make-resolver #hash() (lambda (key sys) (lambda () (file->string key))))
@@ -96,7 +98,8 @@ a path.
 
 A more sensible implementation of @racket[key->thunk] would return
 a procedure with caching behaviors, likely with some measure of change
-detection (e.g. @racket[fenced-factory]).
+detection. As a courtesy, @racketmodname[unlike-assets/resolver/extension]
+provides @racket[fenced-factory] to aid caching.
 }
 
 @defstruct[exn:fail:unlike-assets:cycle ([dependency any/c] [dependents list?])]{

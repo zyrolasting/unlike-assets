@@ -11,12 +11,12 @@
 This module helps you write dynamic variants of @racket[require]. That
 is, import procedures that are not limited to @racket[require]'s data
 formats and conventions.  In this light, a non-Racket resource can
-present itself as a Racket value via @racket[procure].
+present itself as a Racket value.
 
 In the context of this module, a @deftech{resolver} is a procedure
 that cooperates with a surjective mapping of Racket values to
-thunks. The thunks are meant to return the latest version
-of a value.
+thunks. The thunks may return the latest version of a value, but are
+not required to do so.
 
 Resolvers in the wild normally understand protocols, search
 directories, and other conventions. The resolvers defined here have no
@@ -59,37 +59,16 @@ the following pattern:
 Reclaiming memory entails discarding resolver references as well
 as resolved value references before a garbage collection pass.
 
-@racket[(R key)] caches @racket[(key->thunk key R)], if it has not
-already done so. It will then return that value. If
-@racket[key->thunk] does not return a procedure, then @racket[R] will
-raise @racket[exn:fail:contract].
+@racket[(R key)] caches @racket[(dependent key->thunk key (key->thunk
+key R))], if it has not already done so. If @racket[key->thunk] does
+not return a procedure, then @racket[R] will raise
+@racket[exn:fail:contract]. Otherwise, it will return the cached value.
 
-If @racket[key->thunk] applies @racket[R] in a way that forms a
-circular dependency, then that application of @racket[R] will raise
-@racket[exn:fail:unlike-assets:cycle].
-
-Every application of @racket[R] to some @racket[k] takes place in a
-continuation marked with the keys of unresolved dependents. When a new
-dependent is recorded, @racket[R] will log the following with the
-@racket['unlike-assets] on the @racket['debug] level:
-
-@verbatim|{
-unlike-assets: dependents: '("styles.css" "index.html")
-}|
-
-In English, this means "I am now trying to resolve @tt{styles.css},
-which is a dependency of the also unresolved @tt{index.html}". If you
-track these messages, you can construct a dependency graph to analyze
-the shape of a project. If you have a circular dependency, these
-messages can help you figure out how to fix that. The dependents list
-shown in the log message is attached to the logged event as data.
-
-Dependent keys in a continuation are compared using @racket[equal?] to
-detect cycles. The burden is on you to ensure that your keyspace
-consists of unique values, because a resolver will not understand if a
-dependency between @racket{page?a=1&b=2} and @racket{page?b=2&a=1}
-would form a cycle. You can rectify this by rewriting ambiguous keys
-with a surjective function as shown below, or by setting
+The burden is on you to ensure that your keyspace consists of unique
+values, because a resolver will not understand if a dependency between
+@racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
+cycle. You can rectify this by rewriting ambiguous keys with a
+surjective function as shown below, or by using
 @racket[current-rewriter].
 
 @racketblock[
@@ -99,33 +78,19 @@ with a surjective function as shown below, or by setting
 (resolver (disambiguate k))
 ]
 
-A resolver only caches thunks returned by @racket[key->thunk], not the
-values those thunks return. The following resolver is wasteful because
-it reads a file into memory for every application of @racket[R] to a
-path.
+To repeat for emphasis: A resolver only caches thunks returned by
+@racket[key->thunk], not the values those thunks return. The following
+resolver is therefore wasteful because @racket[((R key))] will read
+the given file into memory every time.
 
 @racketblock[
 (make-resolver #hash() (lambda (key sys) (lambda () (file->string key))))
 ]
 
-A more sensible implementation of @racket[key->thunk] would return
-a procedure with caching behaviors, likely with some measure of change
-detection. As a courtesy, @racketmodname[unlike-assets/resolver/extension]
-provides @racket[fenced-factory] to aid caching.
-}
-
-@defstruct[exn:fail:unlike-assets:cycle ([dependency any/c] [dependents list?])]{
-An error raised when a resolver encounters a cycle.
-
-@racket[dependency] is the key of a requested value that formed a cycle.
-That value will also appear in @racket[dependents].
-
-@racket[dependents] is the list of keys used for some resolver leading
-up to @racket[dependency], where the first element is the most recent
-request. Formally, the first element in @racket[dependents] is
-dependent on the value implied by @racket[dependency]. Beyond that,
-the @racket[N]th element in @racket[dependents] depends on the
-@racket[N-1]th element.
+A more sensible implementation of @racket[key->thunk] would return a
+procedure with caching behaviors. For that,
+@racketmodname[unlike-assets/resolver/extension] provides
+@racket[fenced-factory] as a courtesy.
 }
 
 @defthing[current-resolver (parameter/c resolver?)]{
@@ -142,10 +107,9 @@ value is the identity function.
 Equivalent to @racket[((current-resolver) ((current-rewriter) key))].
 
 @racket[procure/weak] is useful for populating a resolver's cache
-without forcing the current process to compute a value. A circular
-dependency will still raise @racket[exn:fail:unlike-assets:cycle].
+without forcing the current process to compute a value.
 }
 
 @defproc[(procure [key any/c]) any/c]{
-Equivalent to @racket[((procure/weak key))].
+Equivalent to @racket[(dependent (current-resolver) key ((procure/weak key)))].
 }

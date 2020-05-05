@@ -1,8 +1,9 @@
 #lang scribble/manual
 
 @require[@for-label[racket/base
-                    racket/file
                     racket/contract
+                    racket/file
+                    racket/function
                     unlike-assets]]
 
 @title{Extending Resolvers}

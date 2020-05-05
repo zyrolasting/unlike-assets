@@ -21,3 +21,4 @@ For a friendly introduction, see @other-doc['(lib "unlike-assets/scribblings/unl
 @include-section{distributor.scrbl}
 @include-section{cli.scrbl}
 @include-section{logging.scrbl}
+@include-section{cycle.scrbl}

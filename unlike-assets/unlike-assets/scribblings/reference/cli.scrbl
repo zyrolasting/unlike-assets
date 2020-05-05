@@ -2,47 +2,65 @@
 
 @require[@for-label[racket/base
                     racket/contract
-                    unlike-assets]]
+                    unlike-assets
+                    unlike-assets/cli]]
 
-@title{Default Command Line Interface}
+@title{Command Line Interfaces}
 @defmodule[unlike-assets/cli]
 
-@defproc[(u/a-cli) any]{
+@defproc[(u/a-cli [run-action (-> string? any) (lambda (action) ...)]) any]{
 Consumes @racket[current-command-line-arguments] to interact with
-@racketmodname[unlike-assets/distributor] or
-@racketmodname[unlike-assets/server]. Forwards log messages on the
-@racket['unlike-assets] topic to STDOUT.
+systems built using @racket[unlike-assets].
+
+Assuming @racket[run-action] does nothing, @racket[u/a-cli] will only
+install handlers to handle user breaks and forward log messages on the
+@racket['unlike-assets] topic to STDOUT. It will only consume a
+@litchar{--verbose, -v} flag to control whether STDOUT will include
+debug-level messages.
+
+@racket[u/a-cli] consumes the first command line argument after any
+consumed flags. It will then apply @racket[run-action] to that
+argument for its side-effect, in a parameterization where
+@racket[current-command-line-arguments] is set to whatever
+@racket[u/a-cli] did not consume.
+
+This means that if you run @litchar{racket cli.rkt -v foo bar -a baz},
+@racket[u/a-cli] will evaluate @racket[(run-action "foo")] with
+@racket[(current-command-line-arguments)] set to @racket['#("bar" "-a"
+"baz")]. You can use this to define your own subcommands without
+giving up visible logging and error handling.
+
+By default, @racket[run-action] is:
+
+@racketblock[
+(define (default-run-action action)
+  ((case action
+    [("distribute") u/a-cli/distribute]
+    [("serve") u/a-cli/serve]
+    [else (λ (r)
+            (eprintf "Unknown action: ~a~n" action)
+            (exit 1))])
+   (current-resolver)))
+]
+}
+
+@defproc[(u/a-cli/distribute [resolver resolver?]) any]{
+Consumes @racket[current-command-line-arguments]
+to call @racket[(sync-filesystem-to-resolver-cache! resolver)].
 
 All positional arguments in the command line are forwarded to
-@racket[procure] before anything else happens. Each argument is logged
-as an info-level event when the associated value is @racket[procure]d.
+@racket[resolver] before synchronizing the file system. Each argument
+is logged as an info-level event when the associated value is
+@racket[procure]d.
 
-Only one of the following flags can be specified at a time.
-Each flag is shown with the procedure applied via the flag's use.
+If @litchar{--no-dry-run, -n} is set, @racket[dry-run-enabled] is
+first set to @racket[#f]. This will commit all changes to disk.
+}
 
-@itemlist[
+@defproc[(u/a-cli/serve [resolver resolver?]) any]{
+Consumes @racket[current-command-line-arguments]
+to call @racket[(start-server resolver #:port port)].
 
-@item{@litchar{--serve, -s}: Calls @racket[start-server].}
-
-@item{@litchar{--distribute, -d}: Calls
-@racket[sync-filesystem-to-resolver-cache!].  By default, no files are
-written. File activity is instead logged as info-level events. Use
-@litchar{--no-dry-run} to modify the disk.}
-
-]
-
-The server or distributor will start after all assets named in
-the command line are procured.
-
-@itemlist[
-
-@item{@litchar{--verbose, -v}: Includes debug-level log messages in
-STDOUT.}
-
-@item{@litchar{--port, -p}: (When @litchar{--server} is set) Selects the TCP port used to listen for connections.}
-
-@item{@litchar{--no-dry-run, -n}: (When @litchar{--distribute} is set) Commits the actions of the distributor to disk.}
-
-]
-
+@litchar{--port, -p} determines the value of @racket[port]
+in that call.
 }

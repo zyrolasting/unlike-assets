@@ -2,10 +2,10 @@
 
 (require racket/contract
          idiocket/function
-         "private/cycle.rkt")
+         "cycle.rkt")
 
 (provide
- (all-from-out "private/cycle.rkt")
+ (all-from-out "cycle.rkt")
  (contract-out
   [resolver? predicate/c]
   [current-resolver (parameter/c resolver?)]
@@ -31,9 +31,7 @@
   (define (resolve key)
     (hash-ref! known
                key
-               (λ ()
-                 (define th (key->proc key R))
-                 (λ () (dependent key (th))))))
+               (λ () (dependent key->proc key (key->proc key R)))))
 
   (define (get-manifest)
     (for/fold ([h #hash()]) ([(k p) (in-hash known)])
@@ -51,7 +49,7 @@
   ((current-resolver) ((current-rewriter) key)))
 
 (define (procure key)
-  ((procure/weak key)))
+  (dependent (current-resolver) key ((procure/weak key))))
 
 (define current-resolver
   (make-parameter
@@ -87,6 +85,7 @@
     (define R (make-resolver #hash() key->proc))
     (for ([i (in-range 6)]) (R i))
     (define I (R))
+
     (check-equal? (sort (hash-ref I pA) <) '(0 1 2))
     (check-equal? (sort (hash-ref I pB) <) '(3 4 5))
     (check-equal? 2 (length (hash-keys I)))

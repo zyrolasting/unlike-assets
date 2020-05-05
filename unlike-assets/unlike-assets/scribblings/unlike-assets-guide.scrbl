@@ -2,6 +2,9 @@
 
 @require[@for-label[
 racket/base
+racket/hash
+racket/path
+racket/port
 racket/rerequire
 unlike-assets
 u/a]
@@ -35,20 +38,27 @@ work}.
 
 @section{How to Use This Guide}
 
-This document only covers basic use without any optional packages.
+This document only covers use of bindings from
+@racketmodname[unlike-assets] without any optional packages. This
+means we will @italic{not} cover creating a competitor to an incumbent
+technology in this guide.
 
-In every section leading up to @secref{training-wheels-off} I present
-meaningful and clear configurations that do what they say. I'll also
-discuss a development server and a file export tool.
+While this guide is meant to be a friendly introduction, UA is for
+programmers that are already comfortable with Racket. I will not
+explain the meaning of changes between examples that are not unique to
+UA.
 
-In @secref{training-wheels-off}, I replace the most developed
-configuration in the guide with one that illustrates inner
-workings. If you understand that section, then you are capable of
-programming a resolver with @other-doc['(lib
+The guide is structured in order of increasing difficulty and
+flexibility.  I'll start with clean and understandable recipes.  I'll
+then add features, and strip off a layer of helpers to show you
+how everything works under the hood. The guide will conclude with
+a non-trivial exercise that will expose you to some nuance.
+
+The guide's structure is meant to help you stop reading once you have
+what you need. Those of you who finish the guide entirely will be able
+to write add-ons to Unlike Assets, and will be able to comfortably
+digest @other-doc['(lib
 "unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")].
-
-Once you are accustomed to programming your own resolver, you can
-install other @tt{unlike-*} packages.
 
 
 @section{Setup}
@@ -70,20 +80,20 @@ u/a
   (existing-files get-file-info
                   (search-within (this-directory/))))]
 
-This is a custom resolver. It uses @racket[existing-files] to looks
-for files on disk, and will resolve relative paths using
-@racket[search-within]. The resolved value will be information about
-an associated file.
+This installs a custom global resolver. It uses
+@racket[existing-files] to looks for files on disk, and will resolve
+relative paths using @racket[search-within]. The resolved value will
+be information about an associated file.
 
 
 @section{The @racket[procure] Procedure}
 
-@racket[procure] acts as a configurable, runtime variant of
-@racket[require].  @racket[replace-resolver] swaps out the resolver
-implementation that @racket[procure] uses to compute a value.
+@racket[procure] is a runtime variant of @racket[require] that uses
+your code. The configuration module we wrote installs a global
+resolver that @racket[procure] uses to compute a value.
 
-Open a REPL in the directory containing @tt{project.rkt} and try the
-following session:
+See for yourself. Open a REPL in the directory containing
+@tt{project.rkt} and try the following session:
 
 @racketinput[(require unlike-assets)]
 @racketinput[(require "project.rkt")]
@@ -95,48 +105,35 @@ following session:
          (file-size . 113))]
 
 The @racket[require]s work as you'd expect. By instantiating
-@racket{project.rkt} we installed our resolver. This changes the
-behavior of @racket[procure]. We then use @racket[procure] to inspect
-the very file that configured it.
+@racket{project.rkt}, @racket[procure] is now able to inspect
+the file that configured it.
 
-The extensions that Unlike Assets provides for you tries to keep
-values up to date. @italic{With your REPL still running}, edit
-@tt{project.rkt} by adding a few blank lines somewhere in the
-file. Then come back and evaluate @racket[(procure "./project.rkt")]
-again.
+@italic{With your REPL still running}, add a few blank lines to
+@tt{project.rkt}. Save the file, then evaluate @racket[(procure
+"project.rkt")] again.
 
-@racketinput[(procure "./project.rkt")]
+@racketinput[(procure "project.rkt")]
 @racketblock[
 '#hasheq((file-or-directory-identity . 268426800264404560024501506)
          (file-or-directory-modify-seconds . 1588629484)
          (file-or-directory-permissions . (write read))
          (file-size . 113))]
 
-Even though your program did not change, the resolver captured a
-change in @tt{project.rkt}. This aids helpful use cases, such as
-documents that maintain correct relative paths to their dependencies,
-and development servers that show you the latest preview of your work.
+Your resolver (specifically @racket[existing-files]) captured a change
+in @tt{project.rkt}. This aids helpful use cases, such as documents
+that maintain correct relative paths to their dependencies, and
+development servers that show you the latest preview of your work.
 
-Unlike Assets ships with a development server and file distribution
-tools that don't care about how your resolver works. We'll cover those now.
+On that note, Unlike Assets ships with a development server.
 
 @section{Development Server}
-Shut down your REPL and edit @tt{project.rkt} like so:
+Shut down your REPL and add @racket[(module+ main (u/a-cli))] to
+@tt{project.rkt}. This installs the default command line interface,
+which allows you to observe logs, start a prototype server, and export
+files.
 
-@racketmod[#:file "project.rkt"
-u/a
-
-(replace-resolver
-  (existing-files get-file-info
-                  (search-within (this-directory/))))
-
-(module+ main (u/a-cli))]
-
-This installs the default command line interface, which allows you to
-observe logs, start a prototype server, and export files.
-
-In your terminal, run @litchar{racket project.rkt --serve} to start a
-development server on the default port 8080. The server applies
+In your terminal, run @litchar{racket project.rkt serve --port 8080}
+to start a development server on port 8080. The server applies
 @racket[procure] to the URL path in every request. Using @tt{curl} or
 your browser, navigate to @tt{[::]:8080/project.rkt}.
 
@@ -149,109 +146,85 @@ your browser, navigate to @tt{[::]:8080/project.rkt}.
 [sage@localhost ~]$
 }|
 
-Since the server cooperates with your resolver, the same
-responsiveness to change applies. Edit @tt{project.rkt} and request
-the file again to see changes.
+Since the server cooperates with your resolver, you will
+still observe changes when you edit @tt{project.rkt}.
 
 While the interaction looks the same, they are not equivalent. The
 server uses an HTTP response derived from your configuration.
-We'll see why in the next section.
+We'll see why soon.
 
 
-@section{File Distribution}
+@section{Distributor}
 
-Change the call to @racket[existing-files] such that it will look
-in an @tt{assets} subdirectory.
+In this section I will cover the @deftech{distributor}, which is just
+a file export tool that works with resolvers.
 
-@racketblock[
+We're going to use an entirely different configuration for a moment.
+Write this code in @tt{distro.rkt}
+
+@racketmod[#:file "distro.rkt"
+u/a
+
+(require racket/path
+         racket/port)
+
 (define assets/ (this-directory/ "assets"))
+
+(define (on-file input-path)
+  (distributable (this-directory/ "dist" (find-relative-path assets/ input-path))
+                   (lambda (to-output-file)
+                     (call-with-input-file input-path
+                       (lambda (from-input-file)
+                         (copy-port from-input-file to-output-file))))))
 
 (replace-resolver
   (existing-files on-file
-                  (search-within assets/)))]
+                  (search-within assets/)))
 
-From this point on, @racket[(procure "project.rkt")] will no longer
-resolve to that file.
+(module+ main (u/a-cli))]
 
-Next, make that assets directory and toss in this picture of Toffee,
-my Holland Lop, as @tt{toffee.jpg}. If the image doesn't load,
-substitute another image that makes you smile.
+I'll show you what this does. Run @litchar{mkdir assets} in
+@tt{project.rkt}'s directory and toss in this picture of Toffee, my
+Holland Lop, as @tt{toffee.jpg}. If the image doesn't load, substitute
+another image that makes you smile.
 
 @(define-runtime-path toffee "toffee.jpg")
 @image[toffee]
 
-Unlike Assets ships with a @italic{distributor}. It exports
-assets as files, and can sync several directories to reflect the
-current state of your resolver. It comes with a @tech[#:doc '(lib
-"scribblings/reference/reference.scrbl")]{security guard} that
-prevents unwanted writes to disk.
+Now, run @litchar{racket project.rkt distribute project.rkt}.  By
+default, the distributor performs a dry run. It logs what it would
+have done without modifying the contents of your disk. You should see
+an entry showing that @tt{toffee.jpg} will be copied to the @tt{dist}
+directory.
 
-You can preview files for development purposes in your server, and
-save production-ready versions to disk using the distributor.
-To do this, replace the first argument of @racket[existing-files]
-with a new procedure:
+Run the command again with the @litchar{--no-dry-run} option to commit
+the changes to disk.
 
-@racketblock[
-(require racket/hash)
+@verbatim|{
+racket distro.rkt distribute --no-dry-run toffee.jpg
+}|
 
-(define assets/ (this-directory/ "assets"))
+Toffee has multiplied, making the world a warmer and fuzzier place.
 
-(define (on-file path)
-  (hash-union (make-serveable path)
-              (make-distributable path)))
+Copying files is not particularly interesting, though. You can modify
+this configuration to resize, crop, or otherwise transform the image
+before it hits the disk.
 
-(replace-resolver
-  (existing-files on-file
-                  (search-within assets/)))]
+What's more important to note is that we now have two subsystems
+in the mix: the server and the distributor.
 
-@racket[make-serveable] and @racket[make-distributable] don't exist
-yet. We'll create them, but I want you to look at this code as
-an abbreviation of the finished product.
+Start the server using @tt{racket distro.rkt serve} and @tt{GET
+/toffee.jpg}. In a browser, you'll be prompted to download the image.
 
-The @racket[on-file] procedure decides what value represents a
-(possibly changed) file located at some @racket[path]. Notice that it
-glues together two hashes using @racket[hash-union], which should make
-astute readers sweat a bit. Don't fret: UA leverages uninterned
-symbols for keys, namely through @tech[#:doc '(lib
-"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}.
-It's harder to accidentally cause collisions with these keys, so don't
-worry about data mixing in unacceptable ways.
+That's not quite the same behavior. The server has it's own defaults
+for handling resolved data. If you're anything like me, you probably
+want more control and transparency than this. In the next section,
+we will coordinate the two more effectively.
 
-Let's say we want to save our assets as copies of the input
-file, and serve the output of @racket[get-file-info].
+@section{Using the Distributor and Server}
 
-We'll start with the server. Use @racket[serveable] to tell the
-development server how to serve some value. We already have bindings
-for response structs at our disposal.
-
-@racketblock[
-(define (make-serveable path)
-  (serveable (lambda (req)
-               (response/output #:code 200
-                 #:mime-type #"text/plain; charset=utf-8"
-                 (lambda (to-client)
-                   (print (get-file-info path) to-client))))))]
-
-Then use @racket[distributable] to define how a value is sent to
-disk. It takes a path to a file you intend to write, and a procedure
-used to write bytes to that file. Think of it as freeze-dried
-arguments to @racket[call-with-output-file].
-
-I use @racket[distributable] here to swap out the assets directory
-with the dist directory in a given path. That way,
-@tt{/path/to/assets/toffee.jpg} becomes @tt{/path/to/dist/toffee.jpg}.
-
-@racketblock[
-(require racket/path racket/port)
-
-(define (make-distributable input-path)
-  (distributable (this-directory/ "dist" (find-relative-path assets/ input-path))
-                 (lambda (to-output-file)
-                   (call-with-input-file input-path
-                     (lambda (from-input-file)
-                       (copy-port from-input-file to-output-file))))))]
-
-With that, we have the full configuration.
+This configuration is a little heavier. It uses the same distribution
+rules, but also ropes in rules for serving resolved values.
 
 @racketmod[#:file "project.rkt"
 u/a
@@ -277,9 +250,8 @@ u/a
                    (display (get-file-info path) to-client))))))
 
 (define (on-file path)
-  (hash-union
-    (make-serveable path)
-    (make-distributable path)))
+  (hash-union (make-serveable path)
+              (make-distributable path)))
 
 (replace-resolver
   (existing-files on-file
@@ -287,74 +259,46 @@ u/a
 
 (module+ main (u/a-cli))]
 
-Let's see if it works. Fire up the server again. If you GET
-@tt{/toffee.jpg}, you'll see information about my bunny's
-picture. Not the picture itself. If you want to change that, then
-change the @racket[serveable].
+When you serve with this configuration, a @tt{GET} response will be
+the output of @racket[get-file-info] for some file. The distributor
+works the same as it did before. @bold{This shows that you can
+represent an asset one way for a server, and another way when
+exporting files.} In general, it means that one resolver can entertain
+many domains.
 
-Now we'll use the distributor. Run @litchar{racket project.rkt
---distribute project.rkt}.  By default, the distributor performs a dry
-run. It logs what it would have done without modifying the contents of
-your disk. You should see an entry showing that Toffee will appear in
-the dist directory. If not, then please
-@hyperlink["https://github.com/zyrolasting/unlike-assets/issues"]{report
-an issue}.  Otherwise, run the command again with the
-@litchar{--no-dry-run} option to commit the changes to disk.
+The @racket[on-file] procedure decides what value represents a
+(possibly changed) file located at some @racket[path]. Notice that it
+glues together two hashes made using @tech[#:doc '(lib
+"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}.
+It's harder to accidentally cause collisions this way. Even so, we'll
+cover a different approach in @secref{exercise} if this causes you
+concern.
 
-@verbatim|{
-racket project.rkt --no-dry-run --distribute toffee.jpg
-}|
+There's nothing new or magical going on. All we're doing is making
+sure different components get the data they expect. We are reasoning
+about resources in terms of @italic{how they are used}, which is
+a more useful view when supporting different domains.
 
-This is the short form, if your hands are sore: @litchar{racket
-project.rkt -nd toffee.jpg}
+We've been accepting a lot of help from U/A so far. In the next
+section, we'll review the same configuration with the hood up.
 
-You will see that Toffee has been copied to the @tt{dist}
-subdirectory.
-
-In this section we expanded our configuration to support exporting
-files, while serving a different representations of those files. We've
-also adjusted the project to seek input in one directory, only to
-spit out output in a different directory.
-
-
-@section{What Do We Make of All This?}
-
-There's nothing new or magical going on.
-
-The only real difference is that you reason about resources in terms
-of @italic{external assets} and @italic{how they are used}. This is a
-particularly useful view that creative workspaces need to work well.
-
-When you ask for an asset using @racket[procure], you control
-what creates the value you want, and you can decorate any part
-of the process with added features in data so it works in more
-places.
-
-That's it. It doesn't need to be any more than that.
-
-Take five. You've earned a break. In the next section, we'll review
-the same configuration with the hood up.
-
-@section[#:tag "training-wheels-off"]{Take the Traning Wheels Off}
+@section[#:tag "training-wheels-off"]{Removing Helpers}
 
 In this section I discuss a refactor of the configuration we built so
-that it doesn't use @racket[existing-files] and
-@racket[search-within]. It's more information-dense, but
-it will show how you can apply knowledge from @other-doc['(lib
-"unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")].
+that it doesn't use @racket[existing-files], @racket[search-within],
+or the @racketmodname[u/a] language. The result is more information-dense, but it
+is an example of how to write the same code as a direct extension of
+the resolver. This shows how you can apply knowledge from
+@other-doc['(lib
+"unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")]
 
-I won't explain every part of the following code. We're getting to the
-point where you need to think about what's happening.
-
-@margin-note{I understand if indentation with @racket[and], @racket[or], and
-@racket[let] drives you crazy. I personally don't mind using it
-to handle returning @racket[#f] in some cases.}
 @racketmod[#:file "project.rkt"
-u/a
+racket/base
 
 (require racket/hash
          racket/path
-         racket/port)
+         racket/port
+         unlike-assets)
 
 (define assets/ (this-directory/ "assets"))
 
@@ -389,65 +333,129 @@ u/a
 
 (module+ main (u/a-cli))]
 
+Thankfully, it's not terribly different. Let's cover the changes.
+
+The switch to @racketmodname[racket/base] only means that we need to
+@racket[(require unlike-assets)]. This file also loses the ability to
+work with @racket[nearest-u/a], but that's not a problem here.
+
 I added a @racket[resolve-file] procedure to pass to
 @racket[replace-resolver]. Notice that the @tt{assets} directory is
-now mentioned in a different place.
+now mentioned there.
 
 In the context of this configuration, calling @racket[(procure
 "something.txt")], means calling @racket[(resolve-file "something.txt"
 resolver)]. The @racket[resolver] argument will always be the same
 resolver that's currently trying to find the value of
 @racket["something.txt"].  You can apply it recursively to have that
-asset depend on others. Calling @racket[(resolver "something.txt")]
-will make the resolver raise an error complaining about a circular
+asset depend on others. Calling @racket[(resolver key)] in the body of
+@racket[resolve-file] will make the resolver complain about a circular
 dependency.
 
 @racket[resolve-file] must either return a thunk, or @racket[#f].
 
-If @racket[resolve-file] returns @racket[#f], the next procedure
+@itemlist[
+
+@item{If @racket[resolve-file] returns @racket[#f], the next procedure
 passed to @racket[replace-resolver] will be tried, if any exists. One
 does not exist in this case, so an error would be raised complaining
-about how a requested asset wasn't found.
+about how a requested asset wasn't found. I personally use
+@racket[or], @racket[and], and @racket[let] to leverage
+short-circuiting and capture everything in one expression, but you
+don't have to do so if the indentation drives you crazy.}
 
-If @racket[resolve-file] returns a thunk, that thunk will be cached by
+@item{If @racket[resolve-file] returns a thunk, that thunk will be cached by
 the resolver. So when someone asks for the same key twice, the same
-thunk will be called to compute a value.
+thunk will be called to compute a value. This can be a little harder
+to grasp, so think of it this way: The @italic{exact} procedure
+returned by @racket[(resolve-file "something.txt" resolver)] will
+always be used to return the value of @racket[(procure
+"something.txt")]. Once you understand more about how resolvers
+work, you'll understand how to change their cache so that you
+can create a new thunk when it matters.}
 
-I use @racket[fenced-factory] to make a thunk with its own
-cache. Every time you call that thunk, it uses the first expression to
-decide if it should evaluate the second. This is how a resolver can be
-made to deliver the latest value: The same thunk will check for a
-cache hit, then recompute the value if necessary.
+]
+
+All that business about a resolver's cache brings me to
+@racket[fenced-factory], which is a macro provided by UA.
+@racket[fenced-factory] makes a thunk with its own cache. Every time
+you call that thunk, it uses the first expression value to check for
+change over time. If there is a change, it evaluates the
+second expression to cache a new value. This is why you observe
+@racket[procure] returning up-to-date values in our examples.
 
 You do not have to use @racket[fenced-factory]. But you must return a
-thunk to @italic{permanently} associate with some @racket[key].
+thunk to @italic{permanently} associate with some @racket[key]. That
+means you can disable responses to change by avoiding
+@racket[fenced-factory] altogether and returning a thunk that always
+returns the same value.
 
-If you understand how the code works, then you will understand how to
-read @other-doc['(lib "unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")]
+If you understand how this code works, then you are ready for a pop quiz.
+
+
+@section[#:tag "exercise"]{Exercise: Multiple Resolvers}
+
+You should now have an idea of how UA's pieces fit together. This
+section is left as an exercise for you to solve one last design
+problem using @other-doc['(lib
+"unlike-assets/scribblings/reference/unlike-assets-reference.scrbl")].
+
+In all of our examples, the server and distributor were each accepting
+data from the same global resolver. This made us smash the data they
+needed into a single value. This can be convenient, but it forces
+several domains to meet in one place.
+
+@racketblock[
+(hash-union (serveable ...)
+            (serveable2 ...)
+            (exportable ...)
+            (scannable ...)
+            (make-uppable ...)
+            (markable ...)
+            ...)]
+
+Thankfully, a resolver is just a kind of procedure. @racket[procure]
+is nothing more than a shortcut to calling the resolver in the
+@racket[current-resolver] parameter.
+
+Write a configuration where the server and distributor each have their
+own resolvers.  You will create three procedures: One maps complete
+paths to @racket[distributable]s, one maps complete paths to
+@racket[serveable]s, and one maps relative path strings to complete
+paths.
+
+Decide for yourself which of these procedures should be resolvers.
+Modify your configuration such that your resolvers cooperate.
+Finally, change the call to @racket[u/a-cli] to start the server and
+distributor using different resolvers.
+
 
 @section{What Now?}
 From here, you are free to write your own resolver.
 
-I'd hope that your configuration would look something like this:
+If you use a single resolver, I'd hope that your configuration would
+look something like this:
 
 @racketmod[#:file "project.rkt"
 u/a
 
-(require "my-stuff.rkt")
+(require "assets.rkt")
 
 (replace-resolver
-  (documents)
-  (css)
+  (essays)
+  (stylesheets)
   (spreadsheets)
   (shaders))
 
 (module+ main (u/a-cli))]
 
-I envision my own projects as being a composition of, well, unlike
-assets.  If I want a web page with an embedded SPIR-V shader applied
-to a sphere at build-time, then dammit, I want a web page with an
-embedded SPIR-V shader applied to a sphere at build-time. Doing crazy
-things like that requires something like UA.
+
+This configuration represents the envisioned experience.
+
+If you want a web page with an image showing a SPIR-V shader applied to a
+sphere, then dammit, you want a web page with an image showing a SPIR-V
+shader applied to a sphere. Having a custom resolver that dances with
+your dependencies makes that effort less daunting.
 
 On that note, Unlike Assets as a project contains more packages than
 just @tt{unlike-assets}. The
@@ -457,11 +465,6 @@ but how your resolver behaves is honestly up to you. I hope that
 others will add their own extensions so that you can piece together
 something especially cool with little effort.
 
-I hope by now you start having ideas about how to construct website
-builders, video game scene graphs, and advanced preview tools using
-Unlike Assets. That's what I'm going to use it for, and I've spent
-close to a year polishing it's design.
-
 If you want to see UA grow with more neat features, then please
 consider
 @hyperlink["https://github.com/sponsors/zyrolasting"]{sponsoring my
@@ -469,6 +472,7 @@ work}. I count on my users for support so that I can continue making
 free and open source libraries for everyone.
 
 Thank you.
+
 
 @section{Addendum: @tt{"No thunk for key: ..."}}
 

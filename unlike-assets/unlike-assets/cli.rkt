@@ -1,6 +1,8 @@
 #lang racket/base
 
-(provide u/a-cli)
+(provide u/a-cli
+         u/a-cli/distribute
+         u/a-cli/serve)
 (require racket/cmdline
          racket/logging
          racket/tcp
@@ -10,29 +12,10 @@
          "server.rkt"
          "distributor.rkt")
 
-(define (u/a-cli)
+(define (u/a-cli/serve resolver)
   (define port 8080)
-  (define level 'info)
-
-  (define (run-server/wait)
-    (printf "Listening on port ~a~n" port)
-    (displayln "Stop the server with ^C")
-    (define stop (start-server (current-resolver) #:port port))
-    (dynamic-wind void
-                  (λ () (sync/enable-break never-evt))
-                  stop))
-
-  (define (distribute)
-    (sync-filesystem-to-resolver-cache!))
-
-  (define action
-    (λ () (displayln "No action specified. Run with -h for help.")))
-
   (command-line
-   #:program (short-program+command-name)
-   #:usage-help
-   "Compile <asset-refs> according to <policy-module>."
-   "Run `raco doc unlike-assets` for documentation."
+   #:program "serve"
    #:once-each
    [("-p" "--port") user-port
     "If -s is set, sets the port on which to listen for connections."
@@ -41,28 +24,47 @@
       (if (listen-port-number? n)
           (set! port n)
           (error 'unlike-assets "Invalid port: ~a" n)))]
-   [("-n" "--no-dry-run")
-    "Disable dry run."
-    (dry-run-enabled #f)]
-   [("-v" "--verbose")
-    "Show debug level logs"
-    (set! level 'debug)]
-   #:once-any
-   [("-s" "--serve")
-    "Start development server"
-    (set! action run-server/wait)]
-   [("-d" "--distribute")
-    "Distribute files"
-    (set! action distribute)]
-    #:args keys
-    (with-logging-to-port
-      (current-output-port)
-      (λ ()
-        (void (with-handlers ([exn:break? (λ _ (displayln "User break"))])
-                (for ([k (in-list keys)])
-                  (procure k)
-                  (log-unlike-assets-info "procured: ~a" k))
-                (action))))
-      #:logger unlike-assets-logger
-      level
-      'unlike-assets)))
+   #:args ()
+   (printf "Listening on port ~a~n" port)
+   (displayln "Stop the server with ^C")
+   (define stop (start-server resolver #:port port))
+   (dynamic-wind void
+                 (λ () (sync/enable-break never-evt))
+                 stop)))
+
+(define (u/a-cli/distribute resolver)
+  (command-line
+   #:program "distribute"
+   #:once-each
+   [("-n" "--no-dry-run") "Disable dry run." (dry-run-enabled #f)]
+   #:args keys
+   (for ([k (in-list keys)])
+     (procure k)
+     (log-unlike-assets-info "procured: ~a" k))
+   (sync-filesystem-to-resolver-cache! resolver)))
+
+(define (default-run-action action)
+  ((case action
+    [("distribute") u/a-cli/distribute]
+    [("serve") u/a-cli/serve]
+    [else (λ (r)
+            (eprintf "Unknown action: ~a~n" action)
+            (exit 1))])
+   (current-resolver)))
+
+(define (u/a-cli [run-action default-run-action])
+  (define level 'info)
+  (command-line
+   #:program (short-program+command-name)
+   #:once-each
+   [("-v" "--verbose") "Show debug level logs" (set! level 'debug)]
+   #:args (action . others)
+   (with-logging-to-port
+     (current-output-port)
+     (λ ()
+       (void (with-handlers ([exn:break? (λ _ (displayln "User break"))])
+               (parameterize ([current-command-line-arguments (list->vector others)])
+                 (run-action action)))))
+     #:logger unlike-assets-logger
+     level
+     'unlike-assets)))

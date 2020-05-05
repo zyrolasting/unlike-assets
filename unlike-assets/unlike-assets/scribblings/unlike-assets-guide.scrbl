@@ -27,6 +27,11 @@ they were software modules. In that sense, UA abstracts over creative
 frameworks so that you can create your own alternatives to Polyglot,
 Scribble, Frog, Universe, Pollen, etc.
 
+I count on user support to make software like this. If this is helpful
+to you then please consider
+@hyperlink["https://github.com/sponsors/zyrolasting"]{sponsoring my
+work}.
+
 
 @section{How to Use This Guide}
 

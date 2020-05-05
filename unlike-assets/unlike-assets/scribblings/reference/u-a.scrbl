@@ -5,7 +5,8 @@
                     unlike-assets]]
 
 @title{Configuration Language}
-@defmodulelang[@racketfont{u/a} #:module-paths (u/a/lang/reader)]
+
+@(defmodulelang* (u/a))
 
 The @tt{u/a} configuration language is
 @racketmodname[racket/base] with all bindings from

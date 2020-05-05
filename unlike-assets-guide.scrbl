@@ -2,42 +2,97 @@
 
 @require[@for-label[racket/base]]
 
-@title{Unlike Assets: Guide}
+@title{Unlike Assets: Building a Polyglot Alternative}
 @author{Sage Gerard}
 
-Imagine if Racket allowed this, and it did what you meant.
+This guide follows [[Unlike Assets Guide]]. Here, we will implement an
+alternative to @racketmodname[polyglot] from scratch. In a sense, this
+is yet another blog tutorial. But unlike (heh) other blog tutorials,
+we'll be done in five minutes.
 
-@racketblock[
-(dynamic-rerequire "/path/to/script.js")
-(dynamic-require "/path/to/script.js" 'minified)
-]
+If you would rather not read this guide, you can view the source of
+the finished result on GitHub.  Otherwise, stick with me and we'll
+write that code together.
 
-This is basically what Unlike Assets (UA) does.
-
-@racketblock[
-((procure "/path/to/script.js") 'minified)
-]
-
-More specifically, UA offers a programmable resolver that does not
-have to comply with the restrictions imposed by Racket's module
-resolver. The tradeoffs it takes are to the end of helping Racketeers
-set up their own workflow for creative projects.
-
-In that sense, UA as a project abstracts over creative frameworks. The
-legacy edition of UA powers Polyglot, a web development tool. This
-edition is capable of creating a competitor to Polyglot in fewer than
-100 lines of code and in 10 minutes of your time. That's what
-we're going to do here. If you haven't used Polyglot or don't
-know what it is, that's fine. You will have fun.
-
-@section{Installation}
-
-We're going to install the base package and a couple of add-ons.
+@section{Setup}
+We'll need a few packages to get started.
 
 @verbatim|{
-$ raco pkg install unlike-assets unlike-assets-css unlike-assets-markdown
-# Want to feel shrewd? 'raco pkg install unlike-assets{,-css,-markdown}'
+$ raco pkg install unlike-assets unlike-markdown unlike-css unlike-cache-busters
 }|
+
+@tt{unlike-markdown} and @tt{unlike-css} contain modules
+that make their respective formats useful to a custom resolver.
+Next, make a resolver that understands Markdown, CSS, and
+cache-busting files.
+
+@racketmod[#:file "project.rkt"
+u/a
+
+(define search (search-within (this-directory/ "assets")))
+(define (dist-rule f)
+  (distribute-to (this-directory/ "dist") f))
+
+(require "markdown.rkt"
+         "css.rkt"
+         "cache-busters.rkt")
+
+(replace-resolver
+  (markdown)
+  (css)
+  (cache-busters))
+
+(module+ main (u/a-cli))]
+
+Now we'll write each @racket[require]d module.
+
+@section{Markdown}
+
+
+@racketmod[#:file "markdown.rkt"
+u/a
+
+(require unlike-markdown)
+
+(define (markdown)
+  (markdown-modules
+    ))
+
+(module+ main (u/a-cli))]
+
+
+
+In this configuration, the resolver will seek out Markdown documents,
+CSS modules, and static files in an @tt{assets} directory. User-facing
+variants will be distributed to the @tt{dist} subdirectory, just like
+in Polyglot.
+
+@section{Writing a Page}
+
+A Polyglot project can therefore contain Markdown
+
+To do this, let's create a Markdown file that can define
+its own layout and depend on images (as opposed to just
+referencing them).
+
+Let's try a new configuration that demonstrates what I mean.
+
+Make a Markdown document that says this:
+
+@verbatim|{
+
+<script type="text/racket+layout">
+'(html (head "Title")
+       (title))
+</script>
+
+}|
+
+This resolver will dynamically load Racket modules with reload
+support, in keeping with @racket[procure]'s intended purpose.
+The default configuration will simply collect all run-time
+(Phase 0) exports of a module and present them as a hash-table.
+
 
 
 @section{Start a New Project}

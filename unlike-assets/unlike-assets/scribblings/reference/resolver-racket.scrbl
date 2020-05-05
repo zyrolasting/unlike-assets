@@ -3,8 +3,7 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/rerequire
-                    unlike-assets/resolver
-                    unlike-assets/resolver/racket]]
+                    unlike-assets]]
 
 @title{Racket Modules as Resolved Values}
 @defmodule[unlike-assets/resolver/racket]

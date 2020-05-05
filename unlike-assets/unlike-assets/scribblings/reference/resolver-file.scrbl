@@ -24,6 +24,23 @@ Returns:
 Useful for verifying an @racket[existing-files] configuration.
 }
 
+@defproc[(search-within [search-dirs (or/c (or/c path-string?
+                                                 path-for-some-system?)
+                                     (non-empty-listof (or/c path-string?
+                                                             path-for-some-system?)))]
+                        [match? (-> (or/c path-string?
+                                          path-for-some-system?)
+                                     any/c)
+                                file-exists?])
+                        (-> (or/c path-string? path-for-some-system?) (or/c #f complete-path?))]{
+Returns a procedure @racket[search].
+
+@racket[(search relative-path)] returns the first complete path
+@racket[P] where @racket[(match? P)] is true, or @racket[#f] if no
+path matches. The candidate paths are built using
+@racket[search-dirs].
+}
+
 @defproc[(existing-files [on-changed-file (-> (and/c complete-path? file-exists?) (not/c procedure?))]
                          [key->maybe-complete-path (-> any/c (or/c #f complete-path?))])
                          (-> any/c (or/c #f (-> (not/c procedure?))))]{

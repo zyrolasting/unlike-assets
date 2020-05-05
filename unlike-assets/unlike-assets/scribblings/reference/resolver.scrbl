@@ -3,8 +3,7 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/file
-                    unlike-assets/resolver
-                    unlike-assets/resolver/extension]]
+                    unlike-assets]]
 
 @title{Defining Resolvers}
 @defmodule[unlike-assets/resolver]

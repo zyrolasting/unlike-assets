@@ -48,8 +48,8 @@
     "Show debug level logs"
     (set! level 'debug)]
    #:once-any
-   [("-s" "--server")
-    "Start server"
+   [("-s" "--serve")
+    "Start development server"
     (set! action run-server/wait)]
    [("-d" "--distribute")
     "Distribute files"
@@ -61,7 +61,7 @@
         (void (with-handlers ([exn:break? (λ _ (displayln "User break"))])
                 (for ([k (in-list keys)])
                   (procure k)
-                  (log-unlike-assets-info "Procured ~a" k))
+                  (log-unlike-assets-info "procured: ~a" k))
                 (action))))
       #:logger unlike-assets-logger
       level

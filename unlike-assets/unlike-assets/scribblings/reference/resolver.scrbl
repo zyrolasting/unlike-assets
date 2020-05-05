@@ -68,15 +68,28 @@ If @racket[key->thunk] applies @racket[R] in a way that forms a
 circular dependency, then that application of @racket[R] will raise
 @racket[exn:fail:unlike-assets:cycle].
 
-
 Every application of @racket[R] to some @racket[k] takes place in a
-continuation marked with the keys of unresolved dependents.  Those
-keys are compared using @racket[equal?] to detect cycles. The burden
-is on you to ensure that your keyspace consists of unique values,
-because a resolver will not understand if a dependency between
-@racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
-cycle. You can rectify this by rewriting ambiguous keys with a
-surjective function as shown below, or by setting
+continuation marked with the keys of unresolved dependents. When a new
+dependent is recorded, @racket[R] will log the following with the
+@racket['unlike-assets] on the @racket['debug] level:
+
+@verbatim|{
+unlike-assets: dependents: '("styles.css" "index.html")
+}|
+
+In English, this means "I am now trying to resolve @tt{styles.css},
+which is a dependency of the also unresolved @tt{index.html}". If you
+track these messages, you can construct a dependency graph to analyze
+the shape of a project. If you have a circular dependency, these
+messages can help you figure out how to fix that. The dependents list
+shown in the log message is attached to the logged event as data.
+
+Dependent keys in a continuation are compared using @racket[equal?] to
+detect cycles. The burden is on you to ensure that your keyspace
+consists of unique values, because a resolver will not understand if a
+dependency between @racket{page?a=1&b=2} and @racket{page?b=2&a=1}
+would form a cycle. You can rectify this by rewriting ambiguous keys
+with a surjective function as shown below, or by setting
 @racket[current-rewriter].
 
 @racketblock[

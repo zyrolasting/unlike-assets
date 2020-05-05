@@ -501,20 +501,3 @@ differently if someone inserts a new @litchar{#lang u/a} file. This
 might be desireable if you come from a world of @tt{.gitignore} and
 @tt{node_modules}. If not, use @racket[nearest-u/a] on an as-needed
 basis.
-
-
-@section{Addendum: Log Messages}
-
-The default CLI supports a @tt{--verbose} option that will forward
-debug messages to STDOUT. UA logs only one message to the
-@racket['unlike-assets] topic on the @racket['debug] level:
-
-@verbatim|{
-unlike-assets: dependents: '("styles.css" "index.html")
-}|
-
-In English, this means "I am now trying to resolve @tt{styles.css},
-which is a dependency of the also unresolved @tt{index.html}". If you
-track these messages, you can construct a dependency graph to analyze
-the shape of a project. If you have a circular dependency, these
-messages can help you figure out how to fix that.

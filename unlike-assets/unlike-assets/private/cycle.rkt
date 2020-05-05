@@ -42,7 +42,10 @@
                    (current-continuation-marks)
                    mark-key)
                   null)))
-  (log-unlike-assets-debug "dependents: ~v" dependents)
+  (log-message unlike-assets-logger
+               'debug
+               (format "dependents: ~v" dependents)
+               dependents)
   dependents)
 
 (define (enter-dependent-section key proc)

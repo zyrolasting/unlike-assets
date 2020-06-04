@@ -27,7 +27,7 @@
 (define (make-resolver-error k r)
   (exn:fail:unlike-assets:unresolved
    (format "No thunk for key: ~a" k)
-   (current-continuation-marks) k R))
+   (current-continuation-marks) k r))
 
 (define (raise-resolver-error k r)
   (raise (make-resolver-error k r)))

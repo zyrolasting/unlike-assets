@@ -8,6 +8,8 @@
 
 (provide (struct-out exn:fail:unlike-assets:cycle)
          make-exn:fail:unlike-assets:cycle
+         get-dependents
+         get-first-dependent
          dependent)
 
 (define-struct (exn:fail:unlike-assets:cycle exn:fail)
@@ -20,6 +22,12 @@
        (current-continuation-marks)
        mark-key)
       #hasheq()))
+
+(define (get-first-dependent site)
+  (let ([deps (get-dependents site)])
+    (if (null? deps)
+        #f
+        (car deps))))
 
 (define (get-dependents site)
   (hash-ref (get-dependents-lookup) site null))
@@ -87,6 +95,12 @@
     (expect-no-cycle (dependent 0 "a" (dependent 0 "b" (dependent 0 "c" (void)))))
     (expect-no-cycle (dependent 1 "a" (dependent 0 "a" (void)))))
 
-  (test-equal? "Can trace dependents"
-               (dependent 0 "a" (dependent 0 "b" (dependent 0 "c" (get-dependents 0))))
-               '("c" "b" "a")))
+  (test-case "Can trace dependents"
+    (check-equal?
+     (dependent 0 "a" (dependent 0 "b" (dependent 0 "c" (get-dependents 0))))
+     '("c" "b" "a"))
+    (check-false
+     (get-first-dependent 0))
+    (check-equal?
+     (dependent 0 "a" (dependent 0 "b" (get-first-dependent 0)))
+     "b")))

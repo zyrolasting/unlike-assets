@@ -64,10 +64,19 @@ already a member of @racket[dependents].
 
 @racket[dependency] is the key of a requested value that formed a cycle.
 
-@racket[dependents] is the list of keys considered unresolved by
-@racket[site]. Each dependent leads up to @racket[dependency], where the first
-element is the most recent request. Formally, the first element in
-@racket[dependents] is dependent on the value implied by
-@racket[dependency] via @racket[site]. Beyond that, the @racket[N]th element in
-@racket[dependents] depends on the @racket[N-1]th element.
+@racket[dependents] is the value of @racket[(get-dependents site)] at
+the moment of error. Each dependent leads up to @racket[dependency],
+where the first element is the most recent request. Formally, the
+first element in @racket[dependents] is dependent on the value implied
+by @racket[dependency] via @racket[site]. Beyond that, the
+@racket[N]th element in @racket[dependents] depends on the
+@racket[N-1]th element.
+}
+
+@defproc[(get-dependents [site any/c]) list?]{
+Returns a list of keys considered unresolved by @racket[site].
+}
+
+@defproc[(get-first-dependent [site any/c]) any/c]{
+Returns @racket[(car (get-dependents site))], or @racket[#f] if there are no dependents.
 }

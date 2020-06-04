@@ -27,14 +27,12 @@ files with the exact file name. (e.g. @racket[(require (nearest-u/a
 }
 
 
-@defproc[(replace-resolver [key->maybe-thunk (-> any/c (or/c #f (-> any/c)))] ...) void?]{
+@defproc[(replace-resolver [key->thunks (-> any/c (-> any/c))] ...) void?]{
 Imperatively replaces @racket[current-resolver] with a new resolver,
 while preserving the cache.
 
-This procedure combines several procedures into a single
-@racket[key->thunk] argument for @racket[make-resolver].  If one
-@racket[key->maybe-thunk] returns @racket[#f], the next one is
-consulted for a procedure. If no procedure is found for all values of
-@racket[key->maybe-thunk], then the combined procedure will raise an
-@racket[exn:fail].
+Equivalent to @racketblock[
+(current-resolver (apply make-resolver ((current-resolver)) key->thunks))
+]
+
 }

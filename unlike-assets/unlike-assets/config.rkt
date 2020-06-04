@@ -17,16 +17,9 @@
                      syntax/location
                      search-upward))
 
-(define (aggregate-routes . options)
-  (λ (k r)
-    (or (ormap (λ (p) (p k r)) options)
-        (error 'u/a "No thunk for key: ~a" k))))
-
 (define (replace-resolver . ps)
   (current-resolver
-   (make-resolver ((current-resolver))
-                  (apply aggregate-routes ps))))
-
+   (apply make-resolver ((current-resolver)) ps)))
 
 (define-for-syntax (find-config start-dir)
   (search-upward/first
@@ -75,15 +68,3 @@
      (syntax-case stx ()
        [(_) (select-find stx)]
        [(_ fn) (select-find stx #'fn)]))))
-
-
-(module+ test
-  (require rackunit
-           racket/list)
-
-  (test-case "Can aggregate routes"
-    (define n 5)
-    (define route (apply aggregate-routes
-                         (map (λ (i) (λ (k r) (and (eq? k i) i))) (range n))))
-    (for ([j (in-range n)])
-      (check-eq? (route j #f) j))))

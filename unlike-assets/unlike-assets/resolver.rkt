@@ -6,25 +6,46 @@
 
 (provide
  (all-from-out "cycle.rkt")
+ (struct-out exn:fail:unlike-assets:unresolved)
  (contract-out
   [resolver? predicate/c]
   [current-resolver (parameter/c resolver?)]
-  [current-rewriter (parameter/c (-> any/c any/c))]
-  [procure/weak (-> any/c (-> any/c))]
-  [procure (-> any/c any/c)]
+  [null-resolver resolver?]
+  [procure (->* (any/c) (resolver?) any/c)]
   [make-resolver
-   (-> (hash/c procedure? (non-empty-listof any/c))
-       (-> any/c resolver? (-> any/c))
-       (and/c resolver?
-              (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
-                      (-> any/c (-> any/c)))))]))
-
+   (->* ((hash/c procedure? (non-empty-listof any/c)))
+        ()
+        #:rest (non-empty-listof (-> any/c resolver? (-> any/c)))
+        (and/c resolver?
+               (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
+                       (-> any/c (-> any/c)))))]))
 
 (define-values (make-resolver-proc resolver?) (of-name "resolver"))
 
-(define (make-resolver table key->proc)
+(struct exn:fail:unlike-assets:unresolved exn:fail (key resolver))
+
+(define (make-resolver-error k r)
+  (exn:fail:unlike-assets:unresolved
+   (format "No thunk for key: ~a" k)
+   (current-continuation-marks) k R))
+
+(define (raise-resolver-error k r)
+  (raise (make-resolver-error k r)))
+
+(define (make-resolver-assert-procedure k r)
+  (λ (e) (if e e (raise-resolver-error k r))))
+
+(define (make-resolver #:rewrite-key [rewrite-key values] table . key->procs)
+  (define (key->proc k r)
+    (or (ormap (λ (p)
+                 (with-handlers ([exn:fail:unlike-assets:unresolved? (const #f)])
+                   (p k r)))
+               key->procs)
+        (raise-resolver-error k r)))
+
   (define known
-    (for*/fold ([h (make-hash)]) ([(p ks) (in-hash table)] [k (in-list ks)])
+    (for*/fold ([h (make-hash)])
+               ([(p ks) (in-hash table)] [k (in-list ks)])
       (hash-set! h k p)
       h))
 
@@ -41,23 +62,17 @@
     (make-resolver-proc
      (case-lambda
        [() (get-manifest)]
-       [(key) (resolve key)])))
+       [(key) (resolve (rewrite-key key))])))
 
   R)
 
-(define (procure/weak key)
-  ((current-resolver) ((current-rewriter) key)))
+(define (procure key [resolver (current-resolver)])
+  (dependent resolver key ((resolver key))))
 
-(define (procure key)
-  (dependent (current-resolver) key ((procure/weak key))))
+(define null-resolver
+  (make-resolver #hash() raise-resolver-error))
 
-(define current-resolver
-  (make-parameter
-   (make-resolver #hash()
-                  (λ (k sys)
-                    (error "Use u/a to implement a resolver")))))
-
-(define current-rewriter (make-parameter values))
+(define current-resolver (make-parameter null-resolver))
 
 (module+ test
   (require rackunit
@@ -77,6 +92,17 @@
                 (make-resolver #hash()
                                (λ (key sys) (sys key))))
               (R "A")))
+
+  (test-case "Can try multiple procedures"
+    (define R
+      (make-resolver (hasheq)
+                     (λ (k r) (and (eq? k 3) (const 3)))
+                     (λ (k r) (and (eq? k 1) (const 1)))))
+
+    (check-exn exn:fail:unlike-assets:unresolved?
+               (λ () (R 0)))
+    (check-eq? ((R 1)) 1)
+    (check-eq? ((R 3)) 3))
 
   (test-case "Resolvers track encountered values"
     (define pA (λ () 'a))

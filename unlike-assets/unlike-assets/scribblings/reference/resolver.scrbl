@@ -5,111 +5,166 @@
                     racket/file
                     unlike-assets]]
 
-@title{Defining Resolvers}
+@title{Defining Custom Module Resolvers}
 @defmodule[unlike-assets/resolver]
 
-This module helps you write dynamic variants of @racket[require]. That
-is, import procedures that are not limited to @racket[require]'s data
-formats and conventions.  In this light, a non-Racket resource can
-present itself as a Racket value.
+This module helps you write custom module resolvers. Specifically, you
+can write variants of @racket[require] that work in an expression
+context with your own idioms.
 
-In the context of this module, a @deftech{resolver} is a procedure
-that cooperates with a surjective mapping of Racket values to
-thunks. The thunks may return the latest version of a value, but are
-not required to do so.
+In the context of Unlike Assets, a @deftech{resolver} is a procedure
+that cooperates with many surjective mappings of Racket values to
+thunks, particularly in a way that leads to nice expressions like
+@racket[(procure "styles.css")]. A resolver adds caching logic and
+cycle detection, but does not mandate any use of I/O.
 
-Resolvers in the wild normally understand protocols, search
-directories, and other conventions. The resolvers defined here have no
-behavior beyond enforcing a particular flow of control.
 
 @defproc[(resolver? [v any/c]) boolean?]{
-Returns @racket[#t] if @racket[v] came from @racket[make-resolver].
+Returns @racket[#t] if @racket[v] was returned by @racket[make-resolver].
 }
 
 @defproc[(make-resolver [known (hash/c procedure? (non-empty-listof string?))]
-                        [key->thunk (-> any/c resolver? (-> any/c))])
+                        [key->thunk (-> any/c resolver? (-> any/c))] ...)
+                        [#:rewrite-key rewrite-key (-> any/c any/c) values]
                         (and/c resolver?
                                (case-> (-> (hash/c procedure?
                                                    (non-empty-listof string?)
                                                    #:immutable #t))
                                        (-> any/c (-> any/c))))]{
 Returns a procedure @racket[R] that encapsulates a mutable cache based
-on @racket[known]. @racket[R]'s behavior depends on the number of
-provided arguments.
+on @racket[known].
 
-@racket[(R)] returns a @racket[hasheq] @racket[H] that maps all cached
-@racket[(key->thunk name R)] values to a list of each corresponding
-@racket[name].
+@racket[(R)] returns a @racket[hasheq] hash representing the
+resolver's cache. The cache's keys are elements of the union of all
+@racket[key->thunk] codomains. The cache's values are lists of
+elements of @racket[R]'s domain. In the below example, the hash claims
+that @racket[(R "a")] and @racket[(R "b")] will both return
+@racket[x].
 
 @racketblock[
 (R "a") (R "b") (R "c")
 (R) (code:comment "#hash((#<procedure:x> . '(\"a\" \"b\")) (#<procedure:y> . '(\"c\")))")
 ]
 
-In this example, the hash tells us that @racket[(R "a")] and
-@racket[(R "b")] will both return @racket[x].
+@margin-note{Multiple @racket[key->thunk] arguments allow for
+expressions like @racket[(make-resolver (hasheq) html js css)].}
 
-You can create a new resolver based on another resolver's cache using
-the following pattern:
+@racket[(R key)] caches @racket[(dependent make-thunk key (make-thunk
+key R))] if it has not already done so, and returns the cached value.
+Here, @racket[make-thunk] is the first @racket[key->thunk] procedure
+to return a thunk value. If no @racket[key->thunk] returns a thunk,
+then @racket[R] will raise @racket[exn:fail:unlike-assets:unresolved].
+
+By default, a resolver will not understand if a dependency between
+@racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
+dependency cycle. You can rectify this using a surjection in
+@racket[rewrite-key]. @racket[rewrite-key] applies to every use of the
+resolver.
 
 @racketblock[
-(define R+ (make-resolver (R) key->thunk))
+(define resolver (make-resolver #:rewrite-key alphabetize-query-string ...))
 ]
 
-Reclaiming memory entails discarding resolver references as well
+}
+
+@defstruct*[exn:fail:unlike-assets:unresolved ([key any/c])]{
+An error raised when no thunk could be produced for a given @racket[key].
+This error type does not clarify the cause, but the message might.
+}
+
+@defthing[null-resolver resolver?]{
+A resolver that raises @racket[exn:fail:unlike-assets:unresolved] for
+all keys.
+}
+
+@defthing[current-resolver (parameter/c resolver?) #:value null-resolver]{
+A shared resolver.
+}
+
+@defproc[(procure [key any/c] [resolver (current-resolver)]) any/c]{
+Equivalent to @racket[(dependent resolver key (resolver key))].
+
+In plain language, this populates the current resolver's cache with a
+thunk and immediately attempts to compute a value with that thunk. The
+entire process is monitored with cycle detection (see @racket[dependent]).
+}
+
+
+@section{Optimizing Memory Use}
+A resolver only caches thunks returned by a @racket[key->thunk]
+procedure passed to @racket[make-resolver], @italic{not the values
+those thunks return}. The following resolver is therefore wasteful
+because @racket[((R key))] will read the given file into memory every
+time.
+
+@racketblock[
+(define R (make-resolver #hash() (lambda (key resolver) (lambda () (file->string key)))))
+]
+
+A more sensible @racket[key->thunk] would return a thunk with its own
+cache.
+
+A resolver will obviously consume more memory over time. You can
+create a new resolver @racket[R+] that behaves the same as @racket[R]
+with a reduced cache by using the following pattern:
+
+@racketblock[
+(define R+ (make-resolver (filter-outdated (R)) key->thunk ...))]
+
+Reclaiming memory entails discarding old resolver references as well
 as resolved value references before a garbage collection pass.
 
-@racket[(R key)] caches @racket[(dependent key->thunk key (key->thunk
-key R))], if it has not already done so. If @racket[key->thunk] does
-not return a procedure, then @racket[R] will raise
-@racket[exn:fail:contract]. Otherwise, it will return the cached value.
 
-The burden is on you to ensure that your keyspace consists of unique
-values, because a resolver will not understand if a dependency between
-@racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
-cycle. You can rectify this by rewriting ambiguous keys with a
-surjective function as shown below, or by using
-@racket[current-rewriter].
+@section{Cooperating with Racket's Initialization Flow}
 
-@racketblock[
-(define resolver (make-resolver ...))
-(define (disambiguate k) ...)
+If you write a Racket module that depends on a particular value of
+@racket[current-resolver] on instantiation, you will not be able to
+load that module without triggering
+@racket[exn:fail:unlike-assets:unresolved].
 
-(resolver (disambiguate k))
+For example, you cannot instantiate this module using any Racket
+launcher because @racket[current-resolver] defaults to
+@racket[null-resolver].
+
+@racketmod[
+racket/base
+
+(require unlike-assets)
+
+(define styles (procure "styles.css")) (code:comment "Raises error")
 ]
 
-To repeat for emphasis: A resolver only caches thunks returned by
-@racket[key->thunk], not the values those thunks return. The following
-resolver is therefore wasteful because @racket[((R key))] will read
-the given file into memory every time.
+There are two ways to fix this.
 
-@racketblock[
-(make-resolver #hash() (lambda (key sys) (lambda () (file->string key))))
+The first fix uses @racket[nearest-u/a] to seek out a configuration
+file that installs your resolver. Assuming that the nearest config
+file handles stylesheets, this example will work because Racket
+evaluates @racket[procure] at a lower phase.
+
+@racketmod[
+racket/base
+
+(require unlike-assets
+         (nearest-u/a))
+
+(define styles (procure "styles.css")) (code:comment "All good.")
 ]
 
-A more sensible implementation of @racket[key->thunk] would return a
-procedure with caching behaviors. For that,
-@racketmodname[unlike-assets/resolver/extension] provides
-@racket[fenced-factory] as a courtesy.
-}
+The benefit of this approach is that it requires no understanding of
+how Racket starts, and it leverages a runtime configuration file
+that's familiar to more people. The drawback is added disk activity at
+compile time and the risk of unexpected behavior if someone writes a
+conflicting configuration that overrides the result of
+@racket[nearest-u/a].
 
-@defthing[current-resolver (parameter/c resolver?)]{
-A global instance of a resolver used by @racket[procure/weak]. The default
-value is a resolver that raises an error asking for an implementation.
-}
+The second fix is to using a custom Racket launcher or distributable
+that loads your resolver configuration in advance of your code.  This
+approach leverages canonical tools, and opens a path to integrating
+your own resolver with Racket's (e.g. @racket[(require
+"index.js")]). The drawback is that your programs will no longer be
+compatible with the built-in executables, and you may need to change
+how your resolver works to accomodate distribution concerns.
 
-@defthing[current-rewriter (parameter/c (-> any/c any/c))]{
-A global instance of a rewrite procedure used by @racket[procure/weak]. The default
-value is the identity function.
-}
-
-@defproc[(procure/weak [key any/c]) (-> any/c)]{
-Equivalent to @racket[((current-resolver) ((current-rewriter) key))].
-
-@racket[procure/weak] is useful for populating a resolver's cache
-without forcing the current process to compute a value.
-}
-
-@defproc[(procure [key any/c]) any/c]{
-Equivalent to @racket[(dependent (current-resolver) key ((procure/weak key)))].
-}
+In short: Use @racket[nearest-u/a] for an @cq{easy out} that lets you
+use Racket's default tooling. Use custom initalization rules for
+increased leverage over Racket, at the cost of more work.

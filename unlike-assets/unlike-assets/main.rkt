@@ -5,7 +5,6 @@
 "resolver/racket.rkt"
 "distributor.rkt"
 "server.rkt"
-"cli.rkt"
 "config.rkt"
 "logging.rkt"
 "cycle.rkt"

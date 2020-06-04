@@ -2,6 +2,7 @@
 
 (require racket/contract
          "logging.rkt")
+
 (provide nearest-u/a
          this-directory/
          (contract-out

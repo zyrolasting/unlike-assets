@@ -6,26 +6,22 @@
                     unlike-assets]]
 
 @title{Defining Custom Module Resolvers}
-@defmodule[unlike-assets/resolver]
 
-This module helps you write custom module resolvers. Specifically, you
-can write variants of @racket[require] that work in an expression
-context with your own idioms.
-
-In the context of Unlike Assets, a @deftech{resolver} is a procedure
-that cooperates with many surjective mappings of Racket values to
-thunks, particularly in a way that leads to nice expressions like
-@racket[(procure "styles.css")]. A resolver adds caching logic and
+Unlike Assets helps you write @deftech{resolvers}, which are variants
+of @racket[require] that work in an expression context (e.g.
+@racket[(resolve "styles.css")]). A resolver adds caching logic and
 cycle detection, but does not mandate any use of I/O.
 
+@section{API Reference}
+@defmodule[unlike-assets/resolver]
 
 @defproc[(resolver? [v any/c]) boolean?]{
 Returns @racket[#t] if @racket[v] was returned by @racket[make-resolver].
 }
 
 @defproc[(make-resolver [known (hash/c procedure? (non-empty-listof string?))]
-                        [key->thunk (-> any/c resolver? (-> any/c))] ...)
                         [#:rewrite-key rewrite-key (-> any/c any/c) values]
+                        [key->thunk (-> any/c resolver? (or/c #f (-> any/c)))] ...)
                         (and/c resolver?
                                (case-> (-> (hash/c procedure?
                                                    (non-empty-listof string?)
@@ -46,20 +42,19 @@ that @racket[(R "a")] and @racket[(R "b")] will both return
 (R) (code:comment "#hash((#<procedure:x> . '(\"a\" \"b\")) (#<procedure:y> . '(\"c\")))")
 ]
 
-@margin-note{Multiple @racket[key->thunk] arguments allow for
-expressions like @racket[(make-resolver (hasheq) html js css)].}
+@racket[(R key)] returns @racket[(make-thunk (rewrite-key key) R)],
+where @racket[make-thunk] is the first @racket[key->thunk] that
+returns a thunk. The thunk is cached, if it wasn't already.
 
-@racket[(R key)] caches @racket[(dependent make-thunk key (make-thunk
-key R))] if it has not already done so, and returns the cached value.
-Here, @racket[make-thunk] is the first @racket[key->thunk] procedure
-to return a thunk value. If no @racket[key->thunk] returns a thunk,
-then @racket[R] will raise @racket[exn:fail:unlike-assets:unresolved].
+Every @racket[key->thunk] may instead return @racket[#f] to indicate
+that it does not produce a thunk for a given key. If every
+@racket[key->thunk] returns @racket[#f], then @racket[(R key)] will
+raise @racket[exn:fail:unlike-assets:unresolved].
 
 By default, a resolver will not understand if a dependency between
 @racket{page?a=1&b=2} and @racket{page?b=2&a=1} would form a
-dependency cycle. You can rectify this using a surjection in
-@racket[rewrite-key]. @racket[rewrite-key] applies to every use of the
-resolver.
+dependency cycle. Use @racket[rewrite-key] to define a unique
+keyspace.
 
 @racketblock[
 (define resolver (make-resolver #:rewrite-key alphabetize-query-string ...))

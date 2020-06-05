@@ -15,7 +15,7 @@
   [make-resolver
    (->* ((hash/c procedure? (non-empty-listof any/c)))
         ()
-        #:rest (non-empty-listof (-> any/c resolver? (-> any/c)))
+        #:rest (non-empty-listof (-> any/c resolver? (or/c #f (-> any/c))))
         (and/c resolver?
                (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
                        (-> any/c (-> any/c)))))]))
@@ -37,9 +37,7 @@
 
 (define (make-resolver #:rewrite-key [rewrite-key values] table . key->procs)
   (define (key->proc k r)
-    (or (ormap (λ (p)
-                 (with-handlers ([exn:fail:unlike-assets:unresolved? (const #f)])
-                   (p k r)))
+    (or (ormap (λ (p) (p k r))
                key->procs)
         (raise-resolver-error k r)))
 

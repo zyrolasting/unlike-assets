@@ -27,10 +27,9 @@ path matches. The candidate paths are built using
 
 @defproc[(existing-files [on-changed-file (-> (and/c complete-path? file-exists?) (not/c procedure?))]
                          [key->maybe-complete-path (-> any/c (or/c #f complete-path?))])
-                         (-> any/c (or/c #f (-> (not/c procedure?))))]{
+                         (-> any/c (or/c #f (-> any/c)))]{
 Returns a procedure @racket[P] suitable for use in
-@racket[replace-resolver] as an extension. @racket[P] represents a
-set of existing files.
+@racket[make-resolver]. @racket[P] represents a set of existing files.
 
 @racket[P] will try to convert a resolver key to a complete path using
 @racket[key->maybe-complete-path].  If

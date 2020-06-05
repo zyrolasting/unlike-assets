@@ -16,7 +16,7 @@
   [module-path->hasheq (-> module-path/c hash-eq?)]
   [racket-modules (->* ((-> string? (or/c module-path/c #f)))
                        ((-> module-path/c (not/c procedure?)))
-                       (-> any/c resolver? (or/c #f (-> (not/c procedure?)))))]))
+                       (-> any/c resolver? (or/c #f (-> any/c))))]))
 
 (define (module-path->hasheq module-path)
   (dynamic-require module-path #f)

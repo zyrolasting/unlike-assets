@@ -10,7 +10,7 @@
   [resolver? predicate/c]
   [current-resolver (parameter/c resolver?)]
   [null-resolver resolver?]
-  [procure (->* (any/c) (resolver?) any/c)]
+  [procure (-> any/c any/c)]
   [make-resolver
    (->* ((hash/c procedure? (non-empty-listof any/c)))
         ()
@@ -59,12 +59,15 @@
     (make-resolver-proc
      (case-lambda
        [() (get-manifest)]
-       [(key) (resolve (rewrite-key key))])))
+       [(key)
+        (let ([rewritten (rewrite-key key)])
+          (dependent resolver rewritten
+                     (resolve rewritten)))])))
 
   R)
 
-(define (procure key [resolver (current-resolver)])
-  (dependent resolver key ((resolver key))))
+(define (procure key)
+  ((current-resolver) key))
 
 (define null-resolver
   (make-resolver #hash() raise-resolver-error))

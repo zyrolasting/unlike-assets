@@ -76,8 +76,8 @@ all keys.
 A shared resolver.
 }
 
-@defproc[(procure [key any/c] [resolver (current-resolver)]) any/c]{
-Equivalent to @racket[(dependent resolver key (resolver key))].
+@defproc[(procure [key any/c]) any/c]{
+Equivalent to @racket[(((current-resolver) key))].
 
 In plain language, this populates the current resolver's cache with a
 thunk and immediately attempts to compute a value with that thunk. The

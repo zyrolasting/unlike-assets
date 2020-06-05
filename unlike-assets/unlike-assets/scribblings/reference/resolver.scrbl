@@ -64,7 +64,6 @@ keyspace.
 
 @defstruct*[exn:fail:unlike-assets:unresolved ([key any/c])]{
 An error raised when no thunk could be produced for a given @racket[key].
-This error type does not clarify the cause, but the message might.
 }
 
 @defthing[null-resolver resolver?]{
@@ -81,11 +80,11 @@ Equivalent to @racket[(((current-resolver) key))].
 
 In plain language, this populates the current resolver's cache with a
 thunk and immediately attempts to compute a value with that thunk. The
-entire process is monitored with cycle detection (see @racket[dependent]).
+entire process is monitored with cycle detection.
 }
 
 
-@section{Optimizing Memory Use}
+@section{Emphasis: The Resolver Only Caches Thunks}
 A resolver only caches thunks returned by a @racket[key->thunk]
 procedure passed to @racket[make-resolver], @italic{not the values
 those thunks return}. The following resolver is therefore wasteful
@@ -97,17 +96,18 @@ time.
 ]
 
 A more sensible @racket[key->thunk] would return a thunk with its own
-cache.
+caching pattern.
 
-A resolver will obviously consume more memory over time. You can
-create a new resolver @racket[R+] that behaves the same as @racket[R]
-with a reduced cache by using the following pattern:
+@section{Cooperating with the Garbage Collector}
+
+You can create a new resolver that behaves the same way with a reduced
+cache by using the following pattern:
 
 @racketblock[
-(define R+ (make-resolver (filter-outdated (R)) key->thunk ...))]
+(set! R (make-resolver (filter-outdated (R)) key->thunk ...))]
 
-Reclaiming memory entails discarding old resolver references as well
-as resolved value references before a garbage collection pass.
+Since this operation discards both the original resolver and cache
+values, it may be sufficient for a productive garbage collection pass.
 
 
 @section{Cooperating with Racket's Initialization Flow}
@@ -160,6 +160,6 @@ your own resolver with Racket's (e.g. @racket[(require
 compatible with the built-in executables, and you may need to change
 how your resolver works to accomodate distribution concerns.
 
-In short: Use @racket[nearest-u/a] for an @cq{easy out} that lets you
+In short: Use @racket[nearest-u/a] for an easy out that lets you
 use Racket's default tooling. Use custom initalization rules for
 increased leverage over Racket, at the cost of more work.

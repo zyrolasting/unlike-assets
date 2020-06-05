@@ -5,7 +5,6 @@
          "cycle.rkt")
 
 (provide
- (all-from-out "cycle.rkt")
  (struct-out exn:fail:unlike-assets:unresolved)
  (contract-out
   [resolver? predicate/c]

@@ -13,7 +13,7 @@
          dependent)
 
 (define-struct (exn:fail:unlike-assets:cycle exn:fail)
-  (site dependency dependents))
+  (scope dependency dependents))
 
 (define mark-key 'unlike-assets:dependents)
 
@@ -23,59 +23,59 @@
        mark-key)
       #hash()))
 
-(define (get-first-dependent site)
-  (let ([deps (get-dependents site)])
+(define (get-first-dependent scope)
+  (let ([deps (get-dependents scope)])
     (if (null? deps)
         #f
         (car deps))))
 
-(define (get-dependents site)
-  (hash-ref (get-dependents-lookup) site null))
+(define (get-dependents scope)
+  (hash-ref (get-dependents-lookup) scope null))
 
 (define (in-cycle? key dependents)
   (and (list? dependents)
        (member key dependents)
        #t))
 
-(define (raise-cycle-error site key dependents)
+(define (raise-cycle-error scope key dependents)
   (raise (exn:fail:unlike-assets:cycle
-          (format "cycle in loading for ~a~nsite: ~v~ndependents:~n~a"
+          (format "cycle in loading for ~a~nscope: ~v~ndependents:~n~a"
                   key
-                  site
+                  scope
                   (string-join
                    (map (λ (v) (format "  ~a" v)) dependents)
                    "\n"))
           (current-continuation-marks)
-          site
+          scope
           key
           dependents)))
 
-(define (add-dependent site key)
+(define (add-dependent scope key)
   (define lookup (get-dependents-lookup))
-  (define dependents (cons key (get-dependents site)))
+  (define dependents (cons key (get-dependents scope)))
   (log-message unlike-assets-logger
                'debug
-               (format "dependents: ~v ~v" site dependents)
-               (list site dependents))
-  (hash-set lookup site dependents))
+               (format "dependents: ~v ~v" scope dependents)
+               (list scope dependents))
+  (hash-set lookup scope dependents))
 
-(define (enter-dependent-section site key proc)
-  (let ([dependents (get-dependents site)])
+(define (enter-dependent-section scope key proc)
+  (let ([dependents (get-dependents scope)])
     (when (in-cycle? key dependents)
-      (raise-cycle-error site key dependents))
-    (with-continuation-mark mark-key (add-dependent site key)
+      (raise-cycle-error scope key dependents))
+    (with-continuation-mark mark-key (add-dependent scope key)
       (proc))))
 
-(define-syntax-rule (dependent site key body ...)
-  (enter-dependent-section site key (λ () body ...)))
+(define-syntax-rule (dependent scope key body ...)
+  (enter-dependent-section scope key (λ () body ...)))
 
 (module+ test
   (require rackunit)
 
-  (define-syntax-rule (expect-cycle expected-site expected-dependency-key expected-dependencies body ...)
+  (define-syntax-rule (expect-cycle expected-scope expected-dependency-key expected-dependencies body ...)
     (check-exn
      (λ (e) (and (exn:fail:unlike-assets:cycle? e)
-                 (eq? (exn:fail:unlike-assets:cycle-site e) expected-site)
+                 (eq? (exn:fail:unlike-assets:cycle-scope e) expected-scope)
                  (equal? (exn:fail:unlike-assets:cycle-dependency e) expected-dependency-key)
                  (equal? (exn:fail:unlike-assets:cycle-dependents e) expected-dependencies)))
      (λ () body ...)))

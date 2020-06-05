@@ -15,11 +15,14 @@ considered a cycle.
 
 Specifically, @racket[dependent] raises
 @racket[exn:fail:unlike-assets:cycle] if at least two equivalent
-expansions appear in a dynamic extent.  Two expansions are equivalent
-if the @racket[site]s of the forms are @racket[eq?] and the
-@racket[key]s of the forms are @racket[equal?].
+expansions appear in a dynamic extent. Two expansions are equivalent
+if the @racket[scope]s and @racket[key]s of the forms are
+@racket[equal?].
 
-This is the simplest example of such an error.
+In the example below, the nested @racket[dependent] raises an
+error. You can eliminate the error if you change the @racket[0] or
+@racket["key"] in either form to some other value.
+
 
 @racketblock[
 (dependent 0 "key" (dependent 0 "key" (void)))

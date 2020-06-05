@@ -17,6 +17,5 @@ For a friendly introduction, see @other-doc['(lib "unlike-assets/scribblings/unl
 @include-section{u-a.scrbl}
 @include-section{resolver-file.scrbl}
 @include-section{resolver-racket.scrbl}
-@include-section{server.scrbl}
 @include-section{logging.scrbl}
 @include-section{cycle.scrbl}

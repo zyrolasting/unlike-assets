@@ -21,7 +21,7 @@
   (or (continuation-mark-set-first
        (current-continuation-marks)
        mark-key)
-      #hasheq()))
+      #hash()))
 
 (define (get-first-dependent site)
   (let ([deps (get-dependents site)])

@@ -8,22 +8,6 @@
 @title{Files as Resolved Values}
 @defmodule[unlike-assets/resolver/file]
 
-@defproc[(get-file-info [path (and/c complete-path? file-exists?)]) hash-eq?]{
-Returns:
-
-@racketblock[
-(hasheq 'file-or-directory-identity
-        (file-or-directory-identity path)
-        'file-or-directory-permissions
-        (file-or-directory-permissions path)
-        'file-size
-        (file-size path)
-        'file-or-directory-modify-seconds
-        (file-or-directory-modify-seconds path))]
-
-Useful for verifying an @racket[existing-files] configuration.
-}
-
 @defproc[(search-within [search-dirs (or/c (or/c path-string?
                                                  path-for-some-system?)
                                      (non-empty-listof (or/c path-string?

@@ -25,5 +25,3 @@ readable files in each directory. The second form will only look for
 files with the exact file name. (e.g. @racket[(require (nearest-u/a
 "config.rkt"))].
 }
-
-}

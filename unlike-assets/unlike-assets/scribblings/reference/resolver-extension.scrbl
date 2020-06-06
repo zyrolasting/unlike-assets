@@ -6,31 +6,16 @@
                     racket/function
                     unlike-assets]]
 
-@title{Extending Resolvers}
+@title{Writing Resolver Extensions}
 @defmodule[unlike-assets/resolver/extension]
 
 This module reprovides @racketmodname[hash-partition],
 @racketmodname[racket/contract], and @racketmodname[racket/hash].
 
-A resolver extension does not have a defined interface. It
-does, however, have at least one of the following goals:
-
-@itemlist[
-@item{Edit keys passed to a resolver.}
-@item{Add a @racket[key->thunk] procedure for a resolver.}
-@item{Add data to a resolved value.}
-@item{Use data in a resolved value.}
-]
-
-The first two goals can be met by simply wrapping procedures or values
-before applying a resolver. Caching can be a concern, so this module
-provides @racket[fenced-factory] as a caching pattern that works well
-with resolvers.
-
-Built-in extensions meet the latter two goals with @tech[#:doc '(lib
-"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}.
-You are not required to use hashes for your own extensions, but you
-must use extensions as per their instructions.
+A resolver extension does not have a defined interface, but
+they can benefit from @tech[#:doc '(lib
+"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}
+or the caching patterns defined here.
 
 @defproc[(make-fence-thunk [make (-> any/c)]
                            [same? (-> any/c any/c any/c) equal?]
@@ -59,7 +44,10 @@ Goes well with @racket[(make-fence-thunk)]. A factory thunk is useable
 as a return value for @racket[key->thunk] in a @tech{resolver}.
 }
 
-@defform[(fenced-factory fence factory)]{
+@defform[(fenced-factory fence-expr factory-expr)]{
+
+Combines @racket[make-factory-thunk] and @racket[make-fence-thunk].
+
 This...
 
 @racketblock[
@@ -69,30 +57,30 @@ This...
 ...expands to this.
 
 @racketblock[
-(make-factory-thunk (make-fence-thunk (lambda () (file-or-directory-modify-seconds path)))
-                    (lambda () (file->string path)))]
+(make-factory-thunk
+  (make-fence-thunk (lambda () (file-or-directory-modify-seconds path)))
+  (lambda () (file->string path)))]
 
-The behavior of this procedure is to apply
-@racket[file-or-directory-modify-seconds], and then only apply
-@racket[file->string] when the cached modification time has changed.
+The expanded expression returns a procedure. When applied, that
+procedure will apply @racket[file-or-directory-modify-seconds], and
+then only apply @racket[file->string] when the modification time has
+changed.
 
-Here's an example of how to install a fenced factory using @racket[replace-resolver].
+By the below example, @racket[(procure "my-file.txt")] will return the
+latest contents of @tt{my-file.txt} in the working directory. The file
+will only be read if the modification time has changed, or was not
+recorded. References to old contents are discarded.
 
 @racketblock[
-(replace-resolver
-  (lambda (key R)
-    (define path
-      (with-handlers ([exn:fail? (const #f)])
-        (build-path (current-directory) key)))
-    (and path
-         (file-exists? path)
-         (fenced-factory (file-or-directory-modify-seconds path)
-                         (file->string path)))))]
+(current-resolver
+  (make-resolver
+    (lambda (key dependents R)
+      (define path
+        (with-handlers ([exn:fail? (const #f)])
+          (build-path (current-directory) key)))
+      (and path
+           (file-exists? path)
+           (fenced-factory (file-or-directory-modify-seconds path)
+                           (file->string path))))))]
 
-Once installed, every application of @racket[(procure "my-file.txt")]
-will return the latest contents of @tt{my-file.txt} in the current
-working directory. The file will only be read if the modification
-time has changed, and references to old contents are discarded.
-If a key does not map to an existing file, then the resolver will
-claim that there is no value to resolve.
 }

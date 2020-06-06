@@ -11,8 +11,8 @@
   [procure (-> any/c any/c)]
   [make-resolver
    (->* ((hash/c procedure? (non-empty-listof any/c)))
-        ()
-        #:rest (non-empty-listof (-> any/c any/c resolver? (or/c #f (-> any/c))))
+        (#:rewrite-key (-> any/c list? any/c))
+        #:rest (non-empty-listof (-> any/c list? resolver? (or/c #f (-> any/c))))
         (and/c resolver?
                (case-> (-> (hash/c procedure? (non-empty-listof any/c) #:immutable #t))
                        (-> any/c (-> any/c)))))]))
@@ -46,7 +46,7 @@
           (format "No thunk for key: ~a" k)
           (current-continuation-marks) k r)))
 
-(define (make-resolver #:rewrite-key [rewrite-key values] table . key->procs)
+(define (make-resolver #:rewrite-key [rewrite-key (λ (a b) a)] table . key->procs)
   (define (key->proc k d r)
     (or (ormap (λ (p) (p k d r))
                key->procs)
@@ -58,15 +58,6 @@
       (hash-set! h k p)
       h))
 
-  (define (resolve key)
-    (hash-ref! known
-               key
-               (λ () (dependent key->proc
-                                key
-                                (key->proc key
-                                           (get-first-dependent R)
-                                           R)))))
-
   (define (get-manifest)
     (for/fold ([h #hash()]) ([(k p) (in-hash known)])
       (hash-set h p (cons k (hash-ref h p null)))))
@@ -76,9 +67,14 @@
      (case-lambda
        [() (get-manifest)]
        [(key)
-        (let ([rewritten (rewrite-key key)])
-          (dependent R rewritten
-                     (resolve rewritten)))])))
+        (define dependents (get-dependents R))
+        (define rewritten (rewrite-key key dependents))
+        (dependent R rewritten
+                   (hash-ref! known rewritten
+                              (λ ()
+                                (dependent key->proc
+                                           rewritten
+                                           (key->proc rewritten dependents R)))))])))
 
   R)
 
@@ -130,7 +126,26 @@
     (check-equal? 2 (length (hash-keys I)))
 
     (test-equal? "A new resolver can be built from the export of another"
-      I ((make-resolver I void)))))
+      I ((make-resolver I void))))
+
+    (test-case "Resolvers show dependents"
+      (define (key->proc key dep recurse)
+        (if (null? dep)
+            (recurse 'b)
+            (check-equal? dep '(a))))
+
+      ((make-resolver #hash() key->proc) 'a))
+
+    (test-case "Resolvers can rewrite keys"
+      (define R (make-resolver #:rewrite-key (λ (k deps) (path->complete-path k))
+                               #hash()
+                               (λ (key deps recurse)
+                                 (check-true (complete-path? key))
+                                 (check-true (andmap complete-path? deps))
+                                 (if (equal? key (path->complete-path "./a.rkt"))
+                                     (recurse "b.rkt")
+                                     (λ () 'whatever)))))
+      (void (R "./a.rkt"))))
 
 
 (define (get-dependents-lookup)

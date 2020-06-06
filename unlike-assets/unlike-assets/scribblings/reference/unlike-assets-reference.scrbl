@@ -8,7 +8,7 @@
 This is the API reference for all bindings provided by the
 @tt{unlike-assets} package.
 
-For a friendly introduction, see @other-doc['(lib "unlike-assets/scribblings/unlike-assets-guide.scrbl")].
+For a friendly introduction, see @other-doc['(lib "unlike-assets/scribblings/guide/unlike-assets-guide.scrbl")].
 
 @table-of-contents[]
 @include-section{resolver.scrbl}

@@ -26,13 +26,4 @@ files with the exact file name. (e.g. @racket[(require (nearest-u/a
 "config.rkt"))].
 }
 
-
-@defproc[(replace-resolver [key->thunks (-> any/c (-> any/c))] ...) void?]{
-Imperatively replaces @racket[current-resolver] with a new resolver,
-while preserving the cache.
-
-Equivalent to @racketblock[
-(current-resolver (apply make-resolver ((current-resolver)) key->thunks))
-]
-
 }

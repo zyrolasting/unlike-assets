@@ -1,13 +1,8 @@
 #lang racket/base
 
-(require racket/contract
-         "logging.rkt")
-
 (provide nearest-u/a
-         this-directory/
-         (contract-out
-          [replace-resolver
-           (->* () #:rest (listof (-> any/c resolver? (or/c #f (-> (not/c procedure?))))) void?)]))
+         this-directory/)
+
 
 (require racket/require-syntax
          unlike-assets/resolver
@@ -17,9 +12,34 @@
                      syntax/location
                      search-upward))
 
-(define (replace-resolver . ps)
-  (current-resolver
-   (apply make-resolver ((current-resolver)) ps)))
+
+(define-syntax nearest-u/a
+  (make-require-transformer
+   (λ (stx)
+     (syntax-case stx ()
+       [(_) (select-find stx)]
+       [(_ fn) (select-find stx #'fn)]))))
+
+
+(define-syntax (this-directory/ stx)
+  (syntax-case stx ()
+    [(_ path-el ...)
+     (with-syntax ([base (syntax-source-directory stx)])
+       #'(if base (build-path base path-el ...)
+             (build-path (current-directory) path-el ...)))]))
+
+
+(define-for-syntax (select-find stx [fn #'#f])
+  (define dir (syntax-source-directory stx))
+  (unless (path? dir)
+    (raise-syntax-error 'nearest-u/a
+                        "Cannot find search directory. Are you using nearest-u/a in a file on disk?"))
+  (define p (find-config/with-cache dir (syntax->datum fn)))
+  (unless (path? p)
+    (error 'nearest-u/a
+           "Cannot find config file when searching from ~a" dir))
+  (expand-import (datum->syntax stx `(file ,(path->string p)))))
+
 
 (define-for-syntax (find-config start-dir)
   (search-upward/first
@@ -33,8 +53,6 @@
                      f)))))
    start-dir))
 
-(define-for-syntax (find-config/filename start-dir fn)
-  (search-upward/first (file-by-exact-name fn) start-dir))
 
 (define-for-syntax find-config/with-cache
   (let ([h (make-hash)])
@@ -44,27 +62,6 @@
                            (find-config/filename start-dir fn)
                            (find-config start-dir)))))))
 
-(define-for-syntax (select-find stx [fn #'#f])
-  (define dir (syntax-source-directory stx))
-  (unless (path? dir)
-    (raise-syntax-error 'nearest-u/a
-                        "Cannot find search directory. Are you using nearest-u/a in a file on disk?"))
-  (define p (find-config/with-cache dir (syntax->datum fn)))
-  (unless (path? p)
-    (error 'nearest-u/a
-           "Cannot find config file when searching from ~a" dir))
-  (expand-import (datum->syntax stx `(file ,(path->string p)))))
 
-(define-syntax (this-directory/ stx)
-  (syntax-case stx ()
-    [(_ path-el ...)
-     (with-syntax ([base (syntax-source-directory stx)])
-       #'(if base (build-path base path-el ...)
-             (build-path (current-directory) path-el ...)))]))
-
-(define-syntax nearest-u/a
-  (make-require-transformer
-   (λ (stx)
-     (syntax-case stx ()
-       [(_) (select-find stx)]
-       [(_ fn) (select-find stx #'fn)]))))
+(define-for-syntax (find-config/filename start-dir fn)
+  (search-upward/first (file-by-exact-name fn) start-dir))

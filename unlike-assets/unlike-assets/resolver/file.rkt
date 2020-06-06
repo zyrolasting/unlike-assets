@@ -23,7 +23,7 @@
   (within-directories file-exists? search-dirs))
 
 (define (existing-files on-new-file key->maybe-complete-path)
-  (λ (key recurse)
+  (λ (key dependent recurse)
     (define maybe-complete-path (key->maybe-complete-path key))
     (and maybe-complete-path
          (fenced-factory (file-or-directory-modify-seconds maybe-complete-path)

@@ -26,7 +26,7 @@
     (values id (dynamic-require module-path id))))
 
 (define (racket-modules make-module-path [make-asset module-path->hasheq])
-  (λ (key recurse)
+  (λ (key dependent recurse)
     (let ([module-path (make-module-path key)])
       (and module-path
            (make-factory-thunk

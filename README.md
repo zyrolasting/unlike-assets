@@ -19,3 +19,22 @@ This repository tracks a contained ecosystem of packages centered
 around `unlike-assets`. The other packages stored here or in other
 repositories include extensions with additional dependencies, which is
 why they are not installed by default.
+
+## Setup
+
+```
+git clone git@github.com:zyrolasting/unlike-assets.git
+cd unlike-assets
+raco pkg install ./unlike-assets
+```
+
+**This package is not (yet) on the default Racket catalog.** The
+default catalog and Racket has a dependency hell problem, so there's
+no good way to publish the latest version of the code without doing
+some weird things. On that note, you might not be able to install some
+future version of this package if you have an old version already on
+your system, somewhere. For that, I'm very sorry.
+
+If you're looking for the old editions, they are available in the
+`unlike-assets-lib`, `unlike-assets-doc`, and `unlike-assets-test`
+packages.

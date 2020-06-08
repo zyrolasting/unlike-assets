@@ -1,11 +1,11 @@
 #lang racket/base
 
 (provide nearest-u/a
-         this-directory/)
-
+         this-directory/
+         use)
 
 (require racket/require-syntax
-         unlike-assets/resolver
+         "resolver.rkt"
          (for-syntax racket/base
                      racket/require-transform
                      racket/path
@@ -65,3 +65,6 @@
 
 (define-for-syntax (find-config/filename start-dir fn)
   (search-upward/first (file-by-exact-name fn) start-dir))
+
+(define (use #:cache [cache ((current-seat))] . resolvers)
+  (current-seat (make-seat (apply rlist resolvers) cache)))

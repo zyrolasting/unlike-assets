@@ -6,18 +6,14 @@
                     racket/function
                     unlike-assets]]
 
-@title{Writing Resolver Extensions}
-@defmodule[unlike-assets/resolver/extension]
+@title{Writing Thunks}
+@defmodule[unlike-assets/resolver/thunk]
 
-This module reprovides @racketmodname[hash-partition],
-@racketmodname[racket/contract], and @racketmodname[racket/hash].
+@defthing[value-thunk/c (-> any/c)]{
+A nullary procedure that returns a single value.
+}
 
-A resolver extension does not have a defined interface, but
-they can benefit from @tech[#:doc '(lib
-"hash-partition/scribblings/hash-partition.scrbl")]{hash partitions}
-or the caching patterns defined here.
-
-@defproc[(make-fence-thunk [make (-> any/c)]
+@defproc[(make-fence-thunk [make value-thunk/c]
                            [same? (-> any/c any/c any/c) equal?]
                            [initial any/c #f]) boolean?]{
 Returns a thunk. The thunk returns @racket[(not (same? prev (make)))],
@@ -25,10 +21,9 @@ where @racket[prev] is either @racket[initial] or the value of a prior
 @racket[(make)].
 
 Goes well with @racket[(make-factory-thunk)].
-
 }
 
-@defproc[(make-factory-thunk [make? (-> any/c)] [make (-> any/c)]) (-> any/c)]{
+@defproc[(make-factory-thunk [make? value-thunk/c] [make value-thunk/c]) value-thunk/c]{
 Returns a thunk that optionally caches a value before returning the
 value in the cache.
 
@@ -82,5 +77,4 @@ recorded. References to old contents are discarded.
            (file-exists? path)
            (fenced-factory (file-or-directory-modify-seconds path)
                            (file->string path))))))]
-
 }

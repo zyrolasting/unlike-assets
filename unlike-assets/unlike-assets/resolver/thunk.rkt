@@ -1,18 +1,15 @@
 #lang racket/base
 
-(require racket/contract
-         racket/hash
-         hash-partition)
+(require racket/contract)
 
-(provide fenced-factory
-         (all-from-out hash-partition
-                       racket/contract
-                       racket/hash)
-         (contract-out [make-fence-thunk (->* ((-> any/c))
-                                              ((-> any/c any/c any/c)
-                                               any/c)
-                                             (-> boolean?))]
-                       [make-factory-thunk (-> (-> any/c) (-> any/c) (-> any/c))]))
+(define value-thunk/c (-> any/c))
+
+(provide
+ fenced-factory
+ (contract-out
+  [value-thunk/c contract?]
+  [make-fence-thunk (->* (value-thunk/c) ((-> any/c any/c any/c) any/c) (-> boolean?))]
+  [make-factory-thunk (-> value-thunk/c value-thunk/c value-thunk/c)]))
 
 (define (make-fence-thunk make [same? equal?] [initial #f])
   (let ([cache initial])
@@ -33,9 +30,6 @@
              (set! result (make)))
            result)))
      'make-factory-thunk)))
-
-(define (make-resolver-thunk make? make)
-  (λ (k r) (and (make? k r) (make k r))))
 
 (define-syntax-rule (fenced-factory fence factory)
   (make-factory-thunk (make-fence-thunk (λ () fence))

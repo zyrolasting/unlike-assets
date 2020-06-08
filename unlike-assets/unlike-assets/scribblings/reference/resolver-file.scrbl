@@ -5,41 +5,52 @@
                     racket/function
                     unlike-assets]]
 
-@title{Files as Resolved Values}
+@title{Filesystem Resolver}
 @defmodule[unlike-assets/resolver/file]
 
-@defproc[(search-within [search-dirs (or/c (or/c path-string?
-                                                 path-for-some-system?)
-                                     (non-empty-listof (or/c path-string?
-                                                             path-for-some-system?)))]
-                        [match? (-> (or/c path-string?
-                                          path-for-some-system?)
-                                     any/c)
-                                file-exists?])
-                        (-> (or/c path-string? path-for-some-system?) (or/c #f complete-path?))]{
-Returns a procedure @racket[search].
+@defproc[(make-filesystem-resolver
+           [#:search-directories search-directories
+            (non-empty-listof (or/c path-string? path-for-some-system?))
+            null]
+           [#:dependent-relative? dependent-relative? any/c #t]
+           [#:include-directories? include-directories? any/c #f]
+           [#:expand-path expand-path (or/c #f (-> path? complete-path?)) #f]
+           [#:changed? changed? (-> complete-path? any/c) file-or-directory-modify-seconds]
+           [make-value (-> complete-path? any/c)])
+         resolver/c]{
+Returns a @tech{resolver} that reasons about paths, files, directories, and links.
 
-@racket[(search relative-path)] returns the first complete path
-@racket[P] where @racket[(match? P)] is true, or @racket[#f] if no
-path matches. The candidate paths are built using
-@racket[search-dirs].
-}
+This resolver returns complete paths as @tech{resolved names}. It will
+raise @racket[exn:fail:unlike-assets:unresolved] if an
+@tech{unresolved names} is not a @racket[path-string?], or if a
+complete path is forbidden according to the configuration.
 
-@defproc[(existing-files [on-changed-file (-> (and/c complete-path? file-exists?) (not/c procedure?))]
-                         [key->maybe-complete-path (-> any/c (or/c #f complete-path?))])
-                         (-> any/c (or/c #f (-> any/c)))]{
-Returns a procedure @racket[P] suitable for use in
-@racket[make-resolver]. @racket[P] represents a set of existing files.
+@racket[directories], @racket[files], and @racket[links] all
+accept the following symbols:
 
-@racket[P] will try to convert a resolver key to a complete path using
-@racket[key->maybe-complete-path].  If
-@racket[key->maybe-complete-path] returns @racket[#f], then @racket[P]
-returns @racket[#f]. Otherwise, @racket[key->maybe-complete-path]
-returns a complete path to a presumably existing file.
+@itemlist[
 
-This extension will respond to requests for files by checking a target
-file using @racket[file-or-directory-modify-seconds].  If the file has
-changed, then the thunk applies @racket[on-changed-file] to derive a
-new value.  If the file is not accessible, then the extension will
-raise the relevant error.
+@item{@racket['must-exist]: The complete path must point to an existing entry in the file system to count as a resolved name.}
+
+@item{@racket['disallow]: }
+
+]
+
+If a user requests a complete path, then the resolver will use a
+simplified form of that path as the @tech{resolved name} if the
+configuration allows that path.
+
+If the user requests a relative path, then the resolver will assign a
+base path according to a few rules. If there is a dependent file and
+@racket[dependent-relative?] is true, then path is relative to the
+dependent file's directory. Otherwise, if @racket[search-directories]
+is not empty, then search for the first allowed path in that list.
+
+The resolver computes a value by applying @racket[make-value] to the
+complete path used as the @tech{resolved name}. Subsequent calls apply
+@racket[changed?] to the same path. If @racket[changed?] returns a
+true value, then @racket[make-value] is applied again.
+
+]
+
 }

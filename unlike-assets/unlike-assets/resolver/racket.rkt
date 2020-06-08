@@ -3,7 +3,7 @@
 (require racket/contract
          racket/rerequire
          "../resolver.rkt"
-         "extension.rkt")
+         "thunk.rkt")
 
 (define module-path/c
   (or/c module-path?
@@ -14,9 +14,10 @@
  module-path/c
  (contract-out
   [module-path->hasheq (-> module-path/c hash-eq?)]
-  [racket-modules (->* ((-> string? (or/c module-path/c #f)))
-                       ((-> module-path/c (not/c procedure?)))
-                       (-> any/c resolver? (or/c #f (-> any/c))))]))
+  [make-racket-module-resolver
+   (->* ((-> any/c module-path/c))
+        ((-> module-path/c any/c))
+        resolver/c)]))
 
 (define (module-path->hasheq module-path)
   (dynamic-require module-path #f)
@@ -25,11 +26,10 @@
   (for/hasheq ([id (map car (cdr phase0))])
     (values id (dynamic-require module-path id))))
 
-(define (racket-modules make-module-path [make-asset module-path->hasheq])
-  (λ (key dependent recurse)
-    (let ([module-path (make-module-path key)])
-      (and module-path
-           (make-factory-thunk
-            (make-fence-thunk (λ () (dynamic-rerequire module-path #:verbosity 'none))
-                              (λ (a b) (null? b)))
-            (λ () (make-asset module-path)))))))
+(define (make-racket-module-resolver make-module-path [make-value module-path->hasheq])
+  (make-resolver make-module-path
+                 (λ (resolved-name dependents seat)
+                   (make-factory-thunk
+                    (make-fence-thunk (λ () (dynamic-rerequire resolved-name #:verbosity 'none))
+                                      (λ (a b) (null? b)))
+                    (λ () (make-value resolved-name))))))

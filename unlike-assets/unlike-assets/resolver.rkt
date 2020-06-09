@@ -18,10 +18,12 @@
 
 (define seat-cache/c (hash/c any/c value-thunk/c #:immutable #t))
 
-(define seat/c (case-> (-> seat-cache/c)
-                       (-> any/c value-thunk/c)))
+(define-syntax-rule (seat/c thunk-codomain)
+  (case-> (-> seat-cache/c)
+          (-> any/c (-> thunk-codomain))))
 
 (provide
+ seat/c
  (contract-out
   [resolver/c contract?]
   [make-resolver (-> (-> any/c list? any/c)
@@ -30,10 +32,9 @@
   [null-resolver resolver/c]
   [rcons (-> resolver/c resolver/c resolver/c)]
   [rlist (->* () #:rest (listof resolver/c) resolver/c)]
-  [seat/c contract?]
   [seat-cache/c contract?]
-  [current-seat (parameter/c seat/c)]
-  [make-seat (->* (resolver/c) (seat-cache/c) seat/c)]
+  [current-seat (parameter/c (seat/c any/c))]
+  [make-seat (->* (resolver/c) (seat-cache/c) (seat/c any/c))]
   [procure/weak (-> any/c value-thunk/c)]
   [procure (-> any/c any/c)]))
 

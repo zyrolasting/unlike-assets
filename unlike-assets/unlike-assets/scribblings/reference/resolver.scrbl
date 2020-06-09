@@ -75,8 +75,12 @@ The following two expressions are therefore equivalent:
 A seat cache stores @tech{resolved names} as keys, and thunks as values.
 }
 
-@defthing[seat/c (case-> (-> seat-cache/c) (-> any/c value-thunk/c))]{
-A procedure that represents a @tech{seat}.
+@defform[(seat/c contract-expr)]{
+Expands to a @tech/reference{chapherone contract} that recognizes a @tech{seat}.
+
+Specifically: @racket[(case-> (-> seat-cache/c) (-> any/c contract-expr))].
+
+Use in extensions that require seats to produce certain value types.
 }
 
 @defproc[(make-seat [resolver resolver/c] [cache seat-cache/c]) seat/c]{

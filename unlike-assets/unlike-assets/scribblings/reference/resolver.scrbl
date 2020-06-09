@@ -3,7 +3,8 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/file
-                    unlike-assets]]
+                    unlike-assets]
+                    "elements.rkt"]
 
 @title{Resolvers}
 
@@ -22,7 +23,7 @@ name}. The second is a procedure that returns a relevant value.
 
 
 @defproc[(make-resolver [make-resolved-name (-> any/c list? any/c)]
-                        [make-thunk (-> any/c list? seat/c (-> any/c))])
+                        [make-thunk (-> any/c list? (seat/c any/c) (-> any/c))])
                         resolver/c]{
 Returns a procedure @racket[R], which encapsulates use of
 @racket[make-resolved-name] and @racket[make-thunk].
@@ -73,17 +74,19 @@ The following two expressions are therefore equivalent:
 
 @defthing[seat-cache/c (hash/c any/c value-thunk/c #:immutable #t)]{
 A seat cache stores @tech{resolved names} as keys, and thunks as values.
+The thunks return @tech{resolved values}.
 }
 
 @defform[(seat/c contract-expr)]{
-Expands to a @tech/reference{chapherone contract} that recognizes a @tech{seat}.
+Expands to a @tech/reference{chaperone contract} that recognizes a @tech{seat},
+where @tech{resolved values} match @racket[contract-expr].
 
-Specifically: @racket[(case-> (-> seat-cache/c) (-> any/c contract-expr))].
+Specifically: @racket[(case-> (-> seat-cache/c) (-> any/c (-> contract-expr)))].
 
 Use in extensions that require seats to produce certain value types.
 }
 
-@defproc[(make-seat [resolver resolver/c] [cache seat-cache/c]) seat/c]{
+@defproc[(make-seat [resolver resolver/c] [cache seat-cache/c]) (seat/c any/c)]{
 
 @racket[make-seat] returns a procedure @racket[S].
 
@@ -102,7 +105,7 @@ When using @racket[resolver], @racket[S] will pass itself as an argument to
 the relevant @racket[make-thunk] used in the resolver.
 }
 
-@defthing[current-seat (parameter/c seat/c) #:value (make-seat null-resolver)]{
+@defthing[current-seat (parameter/c (seat/c any/c)) #:value (make-seat null-resolver)]{
 A parameter that programs can use to share a seat.
 }
 

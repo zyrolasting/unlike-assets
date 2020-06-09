@@ -71,13 +71,18 @@ to old contents are discarded.
 
 @racketblock[
 (make-resolver
-  (lambda (unresolved-name dependents seat)
-    (with-handlers ([exn:fail?
-                     (lambda (e) (raise-name-resolution-error unresolved-name dependents))])
-      (define path (build-path (current-directory) unresolved-name))
-      (unless (file-exists? path)
-        (error "file not found"))
-       (values path
-               (fenced-factory (file-or-directory-modify-seconds path)
-                               (file->string path))))))]
+  (lambda (unresolved-name dependents)
+    (define (resolver-assert test)
+      (or test
+      (raise-name-resolution-error unresolved-name
+                                   dependents)))
+
+    (resolver-assert (path-string? unresolved-name))
+    (define path (build-path (current-directory) unresolved-name))
+    (resolver-assert (file-exists? path))
+    path)
+
+  (lambda (path dependents seat)
+    (fenced-factory (file-or-directory-modify-seconds path)
+                    (file->string path))))]
 }

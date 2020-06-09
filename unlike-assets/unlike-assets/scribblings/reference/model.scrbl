@@ -18,15 +18,16 @@ unresolved name is @bold{any} Racket value that communicates what the
 user wants with limited context.
 
 Here, a @deftech{resolver} maps an @tech{unresolved name} to a
-@deftech{resolved name} and a procedure that computes a related value.
-A user may compose resolvers to handle different data formats and
-use cases. Once a user is satisfied with the capabilities of a
-resolver, (s)he may then bind it to a @deftech{seat}. A seat equips a
-resolver with a cache and the means to recursively request other
-resources using @tech{unresolved names}. If a user installs their seat
-in @racket[current-seat], expressions like @racket[(procure
-"logo.svg")] will produce specific values despite the unspecific
-language.
+@deftech{resolved name} and a procedure that computes a
+@deftech{resolved value}.  A user may compose resolvers to handle
+different data formats and use cases. Once a user is satisfied with
+the capabilities of a resolver, (s)he may then bind it to a
+@deftech{seat}. A seat caches responses from a resolver and equips
+that resolver with the means to recursively request other resources
+using @tech{unresolved names}. That way, multiple resolvers can
+communicate If a user installs their seat in @racket[current-seat],
+then expressions like @racket[(procure "logo.svg")] will work
+according to the user's expectations.
 
 Tool authors should use @racket[make-resolver] to serve their users
 under a specific configuration. @racket[make-filesystem-resolver] is an

@@ -4,53 +4,66 @@
                     racket/contract
                     racket/exn
                     racket/string
+                    racket/pretty
                     racket/tcp
                     net/url
                     web-server/web-server
                     web-server/http/request-structs
                     web-server/http/response-structs
                     web-server/dispatchers/dispatch
-                    unlike-assets]]
+                    unlike-assets
+                    unlike-assets/server]]
 
 @title{Unlike-Assets: Server}
 @defmodule[unlike-assets/server]
 
+@(define (u/a-tech str)
+   (tech #:doc '(lib "unlike-assets/scribblings/reference/unlike-assets-reference.scrbl") str))
+
+@(define resolved-value (u/a-tech "resolved value"))
+
 Use this module to build a server that interacts with
-@tech{seats}. @racketmodname[unlike-assets/server] reprovides all
+@u/a-tech{seats}. @racketmodname[unlike-assets/server] reprovides all
 bindings from @racketmodname[web-server/http/request-structs] and
 @racketmodname[web-server/http/response-structs].
 
+@defproc[(make-dispatcher-with-seat
+          [#:on-error on-error (-> request? exn? response?) (lambda () ...)]
+          [#:on-other on-other (-> request? any/c response?) (lambda () ...)]
+          [seat (seat/c any/c)])
+          dispatcher/c]{
 
-@defstruct*[(serveable [make-response (or/c response? (-> request? response?))])]{
+Creates a dispatcher that responds to requests using a @u/a-tech{seat}.
 
-A structure used as a resolved value by the server.
+@racket[request] instances are used as @u/a-tech{unresolved names}.
+
+The @u/a-tech{resolved names} depend on the @u/a-tech{resolver}, which
+in turn impacts caching and dependency resolution.
+
+If a @resolved-value is a @racket[response], then the dispatcher will
+use that response. Otherwise, the dispatcher will apply
+@racket[on-other] to the value. By default, @racket[on-other]
+@racket[pretty-print]s the @resolved-value in a @racket[#"text/plain;
+charset=utf-8"] response body.
+
+If an @racket[exn] is raised while fulfilling the request, then the
+dispatcher will respond with @racket[on-error]. By default,
+@racket[on-error] returns a @racket[response] with a @racket[500]
+status code and @racket[#"text/plain; charset=utf-8"] body showing the
+output of @racket[exn->string].
+
 }
 
 
-@defproc[(make-dispatcher-with-seat [seat seat/c]) dispatcher/c]{
+@defproc[(serve-seat
+          [#:on-error on-error (-> request? exn? response?) (lambda () ...)]
+          [#:on-other on-other (-> request? any/c response?) (lambda () ...)]
+          [#:port port listen-port-number?])
+          procedure?]{
 
-Creates a dispatcher that responds to requests using a @tech{seat}.
+Starts a server using @racket[make-dispatcher-with-seat].
+The related arguments and defaults are the same.
 
-If a @tech{resolved value} is @racket[serveable?], then the dispatcher
-will use it to build a response.  Otherwise the server will respond
-with a @racket[pretty-print]ed view of the @tech{resolved value} as a
-@racket[#"text/plain; charset=utf-8"] body.
-
-If an error is raised while fulfilling the request, then the
-dispatcher will respond with a 500 status code and a plain text body
-showing the result of @racket[exn->string].
-
-This dispatcher does not use @racket[next-dispatcher], so it should
-appear at the end of any dispatcher sequence.
-
-}
-
-
-@defproc[(start-seat-server [seat seat/c] [#:port port listen-port-number?]) procedure?]{
-
-Starts a server using @racket[(make-dispatcher seat)] on the given
-port.
-
-Returns a procedure that, when applied, stops the server.
+Returns a procedure that stops the server when applied.
 
 }

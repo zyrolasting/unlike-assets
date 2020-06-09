@@ -17,19 +17,19 @@
                     web-server/dispatchers/dispatch-lift))
 
 
-(struct serveable (make-response))
-(define serveable/c (struct/c serveable (or/c (-> request? response?) response?)))
-(define server-seat/c (seat/c serveable?))
-
 (provide
  (all-from-out web-server/http/request-structs
                web-server/http/response-structs)
- (struct-out serveable)
  (contract-out
-  [serveable/c contract?]
-  [server-seat/c contract?]
-  [make-dispatcher (-> server-seat/c dispatcher/c)]
-  [start-server (->* (server-seat/c) (#:port listen-port-number? (-> url? any/c)) procedure?)]))
+  [make-dispatcher-with-seat
+   (->* ((seat/c any/c)) (#:on-error (-> request? exn? response?)
+                          #:on-other (-> request? any/c response?))
+        dispatcher/c)]
+  [serve-seat (->* ((seat/c any/c))
+                   (#:port listen-port-number?
+                    #:on-error (-> request? exn? response?)
+                    #:on-other (-> request? any/c response?))
+                   procedure?)]))
 
 
 (define (respond/text code str)
@@ -44,18 +44,26 @@
      (pretty-print val)
      (get-output-string (current-output-port)))))
 
+(define (default-on-error r e)
+  (respond/text 500 (exn->string e)))
 
-(define (make-dispatcher seat)
+(define (default-on-other r v)
+  (show 200 v))
+
+(define (make-dispatcher-with-seat seat
+                                   #:on-error [on-error default-on-error]
+                                   #:on-other [on-other default-on-other])
   (lifter:make
    (λ (req)
-     (with-handlers ([exn? (λ (e) (respond/text 500 (exn->string e)))])
+     (with-handlers ([exn? (λ (e) (on-error req e))])
        (define maybe-resp ((seat req)))
-       (show 200
-             (if (response? maybe-resp)
-                 maybe-resp
-                 (maybe-resp req)))))))
+       (if (response? maybe-resp)
+           maybe-resp
+           (on-other req maybe-resp))))))
 
-
-(define (start-server seat #:port [port 8080])
-  (serve #:dispatch (make-dispatcher seat)
+(define (serve-seat seat
+                    #:port [port 8080]
+                    #:on-error [on-error default-on-error]
+                    #:on-other [on-other default-on-other])
+  (serve #:dispatch (make-dispatcher-with-seat seat)
          #:port port))

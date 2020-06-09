@@ -10,15 +10,27 @@
 
 @defmodule[unlike-assets/resolver]
 
-@defthing[resolver/c  (-> any/c list? procedure? (values any/c procedure?))]{
+
+@defthing[resolver/c  (-> any/c list? (values any/c resolver-thunk-constructor/c))]{
 A procedure that represents a @tech{resolver}.
 
-A @racket[resolver/c] procedure accepts three arguments, in this
-order: an @tech{unresolved name}, a @tech{dependents list}, and a
-@tech{seat}.
+A @racket[resolver/c] procedure accepts two arguments, in this
+order: an @tech{unresolved name} and a @tech{dependents list}.
 
 The resolver must return two values. The first is a @tech{resolved
-name}. The second is a procedure that returns a relevant value.
+name}. The second is a procedure that represents the next step towards
+a @tech{resolved value}.
+}
+
+
+@defthing[resolver-thunk-constructor/c (-> list? (seat/c any/c) (-> any/c))]{
+A procedure built by a @tech{resolver}. It accepts a @tech{dependents list}
+and a @tech{seat}, and returns a thunk. That thunk returns a @tech{resolved value}.
+
+Both a @racket[resolver-thunk-constructor/c] procedure and the thunk it returns
+are allowed to use the @tech{seat} to request resources using @tech{unresolved names}.
+For this reason, they are both equipped with cycle detection. If a dependency cycle
+forms, the procedure caught in a cycle will raise a @racket[exn:fail:unlike-assets:cycle].
 }
 
 

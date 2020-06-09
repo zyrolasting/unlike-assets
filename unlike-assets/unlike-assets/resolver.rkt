@@ -2,18 +2,6 @@
 
 (require racket/contract)
 
-; A resolver does two things:
-;
-;   1. Create a unique name.
-;   2. Create a thunk using output from #1.
-;
-; If a resolver cannot do #1, it will raise an exception.
-; A user can combine resolvers using rcons and rlist.
-
-(define resolver/c
-  (-> any/c list? (values any/c procedure?)))
-
-
 ; A seat manages a cache and acts as a central hub for resources.
 
 (define seat-cache/c (hash/c any/c value-thunk/c #:immutable #t))
@@ -22,12 +10,28 @@
   (case-> (-> seat-cache/c)
           (-> any/c (-> thunk-codomain))))
 
+
+; A resolver does two things:
+;
+;   1. Create a unique name.
+;   2. Create a thunk using output from #1.
+;
+; If a resolver cannot do #1, it will raise an exception.
+; A user can combine resolvers using rcons and rlist.
+
+(define resolver-thunk-constructor/c
+  (-> list? (seat/c any/c) (-> any/c)))
+
+(define resolver/c
+  (-> any/c list? (values any/c resolver-thunk-constructor/c)))
+
 (provide
  seat/c
  (contract-out
   [resolver/c contract?]
+  [resolver-thunk-constructor/c contract?]
   [make-resolver (-> (-> any/c list? any/c)
-                     (-> any/c list? procedure?)
+                     (-> any/c list? value-thunk/c)
                      resolver/c)]
   [null-resolver resolver/c]
   [rcons (-> resolver/c resolver/c resolver/c)]

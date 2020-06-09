@@ -14,10 +14,7 @@
   (-> any/c list? (values any/c procedure?)))
 
 
-; Seats manage a cache and a resolver's own requests for
-; resources. This make a resolver more useable because a user can
-; quickly get a value in exchange for an unresolved name, and a
-; resolver can use the seat to get resources from linked resolvers.
+; A seat manages a cache and acts as a central hub for resources.
 
 (define seat-cache/c (hash/c any/c value-thunk/c #:immutable #t))
 
@@ -78,6 +75,32 @@
 (define (null-resolver unresolved-name dependents)
   (raise-name-resolution-error unresolved-name dependents))
 
+
+(define (make-seat resolve [cache (hash)])
+  (define unresolved-name->thunk
+    (λ (unresolved-name)
+      (define dependents (get-dependents seat))
+      (define-values (resolved-name make-thunk) (resolve unresolved-name dependents))
+      (if (hash-has-key? cache resolved-name)
+          (hash-ref cache resolved-name)
+          (let ([val (make-thunk dependents seat)])
+            (set! cache (hash-set cache resolved-name val))
+            val))))
+
+  (define seat
+    (case-lambda [() cache]
+                 [(unresolved-name) (unresolved-name->thunk unresolved-name)]))
+
+  seat)
+
+(define current-seat
+  (make-parameter (make-seat null-resolver)))
+
+(define (procure/weak unresolved-name)
+  ((current-seat) unresolved-name))
+
+(define (procure unresolved-name)
+  ((procure/weak unresolved-name)))
 
 (module+ test
   (define (capitalize&join-dependencies unresolved-name dependents)
@@ -172,27 +195,32 @@
     (check-equal? (resolve-value complete 'what) #\w)
     (check-equal? (resolve-value complete 123) '("" "1" "2" "3" ""))
     (check-exn exn:fail:unlike-assets:unresolved?
-               (λ () (resolve-value complete null)))))
+               (λ () (resolve-value complete null))))
 
 
-(define (make-seat resolve [cache (hash)])
-  (define unresolved-name->thunk
-    (λ (unresolved-name)
-      (define dependents (get-dependents unresolved-name->thunk))
-      (define-values (resolved-name make-thunk) (resolve unresolved-name dependents))
-      (if (hash-has-key? cache resolved-name)
-          (hash-ref cache resolved-name)
-          (let ([val (make-thunk dependents unresolved-name->thunk)])
-            (set! cache (hash-set cache resolved-name val))
-            val))))
-  (case-lambda [() cache]
-               [(unresolved-name) (unresolved-name->thunk unresolved-name)]))
+  ; Scenario: The home page depends a page, which in turn depends on
+  ; the home page. Conflating hyperlinks with dependency relationships
+  ; is an error.  The above tests catch cycles with resolvers, but we
+  ; need to raise cycle errors through `procure` too.
+  (test-case "Seats catch cycles"
+    (define (keep-name un deps) un)
+    (define (make-page-thunk r d s)
+      (case r
+        [("index.html") (λ () ((s "about.html")))]
+        [("about.html") (λ () ((s "index.html")))]))
 
-(define current-seat
-  (make-parameter (make-seat null-resolver)))
+    (define mock-web-resolver (make-resolver keep-name make-page-thunk))
+    (define seat (make-seat mock-web-resolver))
 
-(define (procure/weak unresolved-name)
-  ((current-seat) unresolved-name))
-
-(define (procure unresolved-name)
-  ((procure/weak unresolved-name)))
+    (check-exn
+     (λ (e)
+       (and (exn:fail:unlike-assets:cycle? e)
+                 (eq? (exn:fail:unlike-assets:cycle-scope e)
+                      seat)
+                 (equal? (exn:fail:unlike-assets:cycle-dependency e)
+                         "index.html")
+                 (equal? (exn:fail:unlike-assets:cycle-dependents e)
+                         '("about.html" "index.html"))))
+     (λ ()
+       (parameterize ([current-seat seat])
+         (procure "index.html"))))))

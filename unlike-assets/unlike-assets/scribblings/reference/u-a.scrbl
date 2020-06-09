@@ -2,12 +2,14 @@
 
 @require[@for-label[racket/base
                     racket/contract
+                    racket/runtime-path
                     unlike-assets]]
 
 @title{Configuration Language}
 
 @(defmodulelang* (u/a))
 
-The @tt{u/a} configuration language is @racketmodname[racket/base]
-with all bindings from @racketmodname[unlike-assets]. Any module
-using @litchar{#lang u/a} is a search target for @racket[nearest-u/a].
+@racketmodname[u/a] provides all bindings from
+@racketmodname[racket/base] and
+@racketmodname[unlike-assets]. @litchar{#lang u/a} modules are a
+target for @racket[nearest-u/a].

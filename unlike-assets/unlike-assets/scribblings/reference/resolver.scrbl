@@ -5,24 +5,19 @@
                     racket/file
                     unlike-assets]]
 
-@title{Writing Resolvers}
+@title{Resolvers}
 
 @defmodule[unlike-assets/resolver]
 
-@racketmodname[unlike-assets/resolver] provides all bindings
-from @racketmodname[unlike-assets/resolver/thunk] and
-@racketmodname[unlike-assets/resolver/exn].
-
 @defthing[resolver/c  (-> any/c list? procedure? (values any/c procedure?))]{
-A procedure representing a @tech{resolver}.
+A procedure that represents a @tech{resolver}.
 
-Since this kind of procedure is used internally by @tech{seats}, you
-are not expected to use it directly. For that reason, this definition
-is high-level.
+A @racket[resolver/c] procedure accepts three arguments, in this
+order: an @tech{unresolved name}, a @tech{dependents list}, and a
+@tech{seat}.
 
-A @racket[resolver/c] procedure returns two values. The first is a
-@tech{resolved name}. The second is a procedure with cycle detection
-enabled that returns a relevant value.
+The resolver must return two values. The first is a @tech{resolved
+name}. The second is a procedure that returns a relevant value.
 }
 
 
@@ -50,7 +45,7 @@ If @racket[R] otherwise cannot resolve a dependency, then it will
 raise @racket[exn:fail:unlike-assets:unresolved].
 }
 
-@defthing[null-resolver resolver?]{
+@defthing[null-resolver resolver/c]{
 A resolver that raises @racket[exn:fail:unlike-assets:unresolved] whenever it is used.
 }
 

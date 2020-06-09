@@ -5,7 +5,7 @@
                     racket/rerequire
                     unlike-assets]]
 
-@title{Racket Modules as Resolved Values}
+@title{Racket Module Resolver}
 @defmodule[unlike-assets/resolver/racket]
 
 @defthing[module-path/c
@@ -14,26 +14,44 @@ Captures values that @racket[racket-modules] can translate to a proper Racket
 module path.
 }
 
-@defproc[(racket-modules [key->maybe-module-path (-> any/c (or/c #f module-path/c))]
-                         [make-result (-> module-path/c (not/c procedure?)) module-path->hasheq])
-                         (-> (or/c #f (-> (not/c procedure?))))]{
-Returns a procedure @racket[P] suitable for use in @racket[replace-resolver].
+@defproc[(make-racket-module-resolver
+          [make-module-path (-> any/c list? module-path/c)]
+          [make-result (-> module-path/c list? seat/c any/c) (lambda () ...)]
+          [#:verbosity verbosity (or/c 'all 'reload 'none)]
+          [#:reload? reload? any/c #t])
+          resolver/c]{
+Returns a resolver that reasons about Racket modules and module paths.
 
-@racket[P] consults @racket[key->maybe-module-path] to derive a usable
-module path for both @racket[dynamic-rerequire] and
-@racket[dynamic-require]. If @racket[key->maybe-module-path] returns
-@racket[#f], then @racket[P] will yield to other
-extensions. Otherwise, it will bind a given resolver key a procedure
-that applies @racket[make-result] to the returned path.
+The resolver only accepts @tech{unresolved names} that match @racket[module-path?].
 
-The modules will not reload if you've already instantiated them
-without a leading @racket[dynamic-rerequire]. In practice, you should
-only use @racket[racket-modules] to manage Racket modules that do not
-benefit from caching, or do not need to exist in a prototyping
-context.
+@tech{resolved names} are @racket[module-path/c] values, which are later
+used in @racket[dynamic-require]. @racket[make-result] must create a
+single value to represent the module. By default, that value will be
+@racket[(module-path->hasheq module-path 0)].
+
+If @racket[reload?] is true, then the target module will first be
+loaded using @racket[dynamic-rerequire] at the given
+@racket[verbosity].  Each subsequent attempt to request a Racket
+module via a @tech{resolver} will therefore return the latest value
+from @racket[make-result].
+
+@bold{Clarifications:}
+
+@itemlist[
+
+@item{The modules will not reload if you've already instantiated them
+without a leading @racket[dynamic-rerequire].}
+
+@item{You can use an isolated filesystem resolver (See
+@racket[make-filesystem-resolver]) to compute in
+@racket[make-module-path].}
+
+]
+
 }
 
-@defproc[(module-path->hasheq [module-path module-path/c]) hash-eq?]{
+@defproc[(module-path->hasheq [module-path module-path/c] [phase exact-nonnegative-integer? 0]) hash-eq?]{
 Loads the given Racket module using @racket[dynamic-require], and
-populates a hash with all runtime exports of the module.
+populates a hash with all exports of the module at a given phase
+(@racket[0] being runtime).
 }

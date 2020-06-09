@@ -2,10 +2,15 @@
 
 @require[@for-label[racket/base
                     racket/contract
+                    racket/runtime-path
                     unlike-assets]]
 
-@title{Project Configuration}
+@title{Configuration}
+
 @defmodule[unlike-assets/config]
+
+@racketmodname[unlike-assets/config] provides all bindings from
+@racketmodname[racket/runtime-path].
 
 @defform[(this-directory/ path-el ...)]{
 Like @racket[build-path], except the first element of the path
@@ -24,4 +29,15 @@ The first form, lacking a file name for a hint, will check all
 readable files in each directory. The second form will only look for
 files with the exact file name. (e.g. @racket[(require (nearest-u/a
 "config.rkt"))].
+}
+
+@defproc[(use [#:cache cache seat-cache/c ((current-seat))] [resolvers resolver/c] ...) void?]{
+
+Replaces @racket[current-seat] with a new @tech{seat} bound to the
+given @racket[resolvers].
+
+Equivalent to:
+
+@racketblock[(current-seat (make-seat (apply rlist resolvers) cache))]
+
 }

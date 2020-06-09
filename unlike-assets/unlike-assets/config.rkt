@@ -2,16 +2,17 @@
 
 (provide nearest-u/a
          this-directory/
-         use)
+         use
+         (all-from-out racket/runtime-path))
 
 (require racket/require-syntax
+         racket/runtime-path
          "resolver.rkt"
          (for-syntax racket/base
                      racket/require-transform
                      racket/path
                      syntax/location
                      search-upward))
-
 
 (define-syntax nearest-u/a
   (make-require-transformer

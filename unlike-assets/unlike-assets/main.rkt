@@ -4,5 +4,5 @@
 "resolver/racket.rkt"
 "resolver/exn.rkt"
 "resolver/thunk.rkt"
-"config.rkt"
 "logging.rkt"
+"config.rkt"

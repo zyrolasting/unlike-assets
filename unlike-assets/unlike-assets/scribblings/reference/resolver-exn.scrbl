@@ -12,34 +12,29 @@
 @defstruct*[exn:fail:unlike-assets:unresolved ([name any/c] [dependents list?])]{
 An error raised when a resolver could not produce a @tech{resolved name}.
 
-For a given instance @racket[E]:
+@racket[name] is a reference to the exact name a user passed to a
+resolver.
 
+@racket[dependents] is a @tech{dependents list}. Assuming the name
+resolution error did not occur at all, the value named by the first
+element would be dependent on the resolved variant of @racket[name].
 
-@racket[(exn:fail:unlike-assets:unresolved-name E)] is a reference to the exact
-name a user passed to a resolver.
-
-@racket[(exn:fail:unlike-assets:cycle-dependents E)] is a
-@tech{dependents list}. If the name resolution error did not occur,
-the value named by the first element would be dependent on the resolved
-variant of @racket[(exn:fail:unlike-assets:unresolved-name E)].
 }
 
 @defstruct*[exn:fail:unlike-assets:cycle ([scope procedure?] [dependency any/c] [dependents any/c])]{
 An error raised when a @tech{resolver} or a thunk it produced
 encounted a circular dependency.
 
-For a given instance @racket[E]:
+@racket[scope] is a procedure that would never terminate if it weren't
+for this exception.
 
-@racket[(exn:fail:unlike-assets:cycle-scope E)] is a procedure that would
-never terminate if it weren't for this exception.
+@racket[dependency] is a @tech{resolved name} of a resource that is
+already a dependent, and therefore cannot be resolved.
 
-@racket[(exn:fail:unlike-assets:cycle-dependency E)] is a @tech{resolved name} of a
-resource that is already a dependent, and therefore cannot be
-resolved.
+@racket[dependents] is a @tech{dependents list}, where the value named
+by the first element is dependent on the value named by
+@racket[dependency].
 
-@racket[(exn:fail:unlike-assets:cycle-dependents E)] is a @tech{dependents list},
-where the value named by the first element is dependent on the value named
-by @racket[(exn:fail:unlike-assets:cycle-dependency E)].
 }
 
 

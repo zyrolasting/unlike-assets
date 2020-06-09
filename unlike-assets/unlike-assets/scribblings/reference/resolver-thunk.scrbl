@@ -6,8 +6,12 @@
                     racket/function
                     unlike-assets]]
 
-@title{Writing Thunks}
+@title{Thunks}
 @defmodule[unlike-assets/resolver/thunk]
+
+@racket[make-resolver] accepts a @racket[make-thunk] argument, which
+obviously returns a thunk. This module offers bindings that help you
+write thunks with custom caching and change detection rules.
 
 @defthing[value-thunk/c (-> any/c)]{
 A nullary procedure that returns a single value.
@@ -20,7 +24,7 @@ Returns a thunk. The thunk returns @racket[(not (same? prev (make)))],
 where @racket[prev] is either @racket[initial] or the value of a prior
 @racket[(make)].
 
-Goes well with @racket[(make-factory-thunk)].
+Goes well with @racket[make-factory-thunk].
 }
 
 @defproc[(make-factory-thunk [make? value-thunk/c] [make value-thunk/c]) value-thunk/c]{
@@ -35,8 +39,7 @@ This implies that if @racket[(make)] aborts before updating the cache
 for the first time, a later application of the thunk will apply
 @racket[make] again regardless of the value of @racket[(make?)].
 
-Goes well with @racket[(make-fence-thunk)]. A factory thunk is useable
-as a return value for @racket[key->thunk] in a @tech{resolver}.
+Goes well with @racket[make-fence-thunk].
 }
 
 @defform[(fenced-factory fence-expr factory-expr)]{
@@ -61,20 +64,20 @@ procedure will apply @racket[file-or-directory-modify-seconds], and
 then only apply @racket[file->string] when the modification time has
 changed.
 
-By the below example, @racket[(procure "my-file.txt")] will return the
-latest contents of @tt{my-file.txt} in the working directory. The file
-will only be read if the modification time has changed, or was not
-recorded. References to old contents are discarded.
+The below @tech{resolver} will return the latest contents of
+@tt{my-file.txt} in the working directory. The file will only be read
+if the modification time has changed, or was not recorded. References
+to old contents are discarded.
 
 @racketblock[
-(current-resolver
-  (make-resolver
-    (lambda (key dependents R)
-      (define path
-        (with-handlers ([exn:fail? (const #f)])
-          (build-path (current-directory) key)))
-      (and path
-           (file-exists? path)
-           (fenced-factory (file-or-directory-modify-seconds path)
-                           (file->string path))))))]
+(make-resolver
+  (lambda (unresolved-name dependents seat)
+    (with-handlers ([exn:fail?
+                     (lambda (e) (raise-name-resolution-error unresolved-name dependents))])
+      (define path (build-path (current-directory) unresolved-name))
+      (unless (file-exists? path)
+        (error "file not found"))
+       (values path
+               (fenced-factory (file-or-directory-modify-seconds path)
+                               (file->string path))))))]
 }

@@ -12,8 +12,6 @@ This is the API reference for all bindings provided by the
 @racketmodname[unlike-assets/resolver],
 @racketmodname[unlike-assets/resolver/file],
 @racketmodname[unlike-assets/resolver/racket],
-@racketmodname[unlike-assets/resolver/exn],
-@racketmodname[unlike-assets/resolver/thunk],
 @racketmodname[unlike-assets/config], and
 @racketmodname[unlike-assets/logging].
 

@@ -27,6 +27,8 @@
 
 (provide
  seat/c
+ (all-from-out "resolver/exn.rkt"
+               "resolver/thunk.rkt")
  (contract-out
   [resolver/c contract?]
   [resolver-thunk-constructor/c contract?]

@@ -10,6 +10,9 @@
 
 @defmodule[unlike-assets/resolver]
 
+@racketmodname[unlike-assets/resolver] provides all bindings from
+@racketmodname[unlike-assets/resolver/exn] and
+@racketmodname[unlike-assets/resolver/thunk].
 
 @defthing[resolver/c  (-> any/c list? (values any/c resolver-thunk-constructor/c))]{
 A procedure that represents a @tech{resolver}.

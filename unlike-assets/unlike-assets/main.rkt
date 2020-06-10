@@ -1,8 +1,6 @@
 #lang reprovide
-"resolver.rkt"
 "resolver/file.rkt"
 "resolver/racket.rkt"
-"resolver/exn.rkt"
-"resolver/thunk.rkt"
+"resolver.rkt"
 "logging.rkt"
 "config.rkt"

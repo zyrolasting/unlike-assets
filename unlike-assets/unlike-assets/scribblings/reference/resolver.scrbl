@@ -61,9 +61,11 @@ If @racket[R] otherwise cannot resolve a dependency, then it will
 raise @racket[exn:fail:unlike-assets:unresolved].
 }
 
+
 @defthing[null-resolver resolver/c]{
 A resolver that raises @racket[exn:fail:unlike-assets:unresolved] whenever it is used.
 }
+
 
 @deftogether[(
 @defproc[(rcons [leading resolver/c] [next resolver/c]) resolver/c]
@@ -87,10 +89,12 @@ The following two expressions are therefore equivalent:
 ]
 }
 
+
 @defthing[seat-cache/c (hash/c any/c value-thunk/c #:immutable #t)]{
 A seat cache stores @tech{resolved names} as keys, and thunks as values.
 The thunks return @tech{resolved values}.
 }
+
 
 @defform[(seat/c contract-expr)]{
 Expands to a @tech/reference{chaperone contract} that recognizes a @tech{seat},
@@ -100,6 +104,7 @@ Specifically: @racket[(case-> (-> seat-cache/c) (-> any/c (-> contract-expr)))].
 
 Use in extensions that require seats to produce certain value types.
 }
+
 
 @defproc[(make-seat [resolver resolver/c] [cache seat-cache/c]) (seat/c any/c)]{
 

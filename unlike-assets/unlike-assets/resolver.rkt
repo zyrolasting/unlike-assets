@@ -33,7 +33,7 @@
   [resolver/c contract?]
   [resolver-thunk-constructor/c contract?]
   [make-resolver (-> (-> any/c list? any/c)
-                     (-> any/c list? value-thunk/c)
+                     (-> any/c list? (seat/c any/c) value-thunk/c)
                      resolver/c)]
   [null-resolver resolver/c]
   [rcons (-> resolver/c resolver/c resolver/c)]

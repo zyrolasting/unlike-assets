@@ -3,7 +3,9 @@
 (require racket/contract)
 
 ; A seat manages a cache and acts as a central hub for resources.
+; The cache holds resolved names and thunks.
 
+(define value-thunk/c (-> any/c))
 (define seat-cache/c (hash/c any/c value-thunk/c #:immutable #t))
 
 (define-syntax-rule (seat/c thunk-codomain)
@@ -27,8 +29,9 @@
 
 (provide
  seat/c
- (all-from-out "resolver/exn.rkt"
-               "resolver/thunk.rkt")
+ (struct-out exn:fail:unlike-assets:unresolved)
+ (struct-out exn:fail:unlike-assets:cycle)
+ raise-name-resolution-error
  (contract-out
   [resolver/c contract?]
   [resolver-thunk-constructor/c contract?]
@@ -44,15 +47,19 @@
   [procure/weak (-> any/c value-thunk/c)]
   [procure (-> any/c any/c)]))
 
-(require "resolver/private/cycle.rkt"
-         "resolver/exn.rkt"
-         "resolver/thunk.rkt")
+
+;; ============================================================
+;; Implementation
+
+(require racket/string)
 
 (module+ test
   (require rackunit
            racket/list
-           racket/format
-           racket/string))
+           racket/format))
+
+;; ============================================================
+;; Resolvers
 
 (define (make-resolver make-resolved-name make-thunk)
   (λ (name dependents)
@@ -83,31 +90,6 @@
   (raise-name-resolution-error unresolved-name dependents))
 
 
-(define (make-seat resolve [cache (hash)])
-  (define unresolved-name->thunk
-    (λ (unresolved-name)
-      (define dependents (get-dependents seat))
-      (define-values (resolved-name make-thunk) (resolve unresolved-name dependents))
-      (if (hash-has-key? cache resolved-name)
-          (hash-ref cache resolved-name)
-          (let ([val (make-thunk dependents seat)])
-            (set! cache (hash-set cache resolved-name val))
-            val))))
-
-  (define seat
-    (case-lambda [() cache]
-                 [(unresolved-name) (unresolved-name->thunk unresolved-name)]))
-
-  seat)
-
-(define current-seat
-  (make-parameter (make-seat null-resolver)))
-
-(define (procure/weak unresolved-name)
-  ((current-seat) unresolved-name))
-
-(define (procure unresolved-name)
-  ((procure/weak unresolved-name)))
 
 (module+ test
   (define (capitalize&join-dependencies unresolved-name dependents)
@@ -202,9 +184,39 @@
     (check-equal? (resolve-value complete 'what) #\w)
     (check-equal? (resolve-value complete 123) '("" "1" "2" "3" ""))
     (check-exn exn:fail:unlike-assets:unresolved?
-               (λ () (resolve-value complete null))))
+               (λ () (resolve-value complete null)))))
 
 
+;; ============================================================
+;; Seats
+
+(define (make-seat resolve [cache (hash)])
+  (define unresolved-name->thunk
+    (λ (unresolved-name)
+      (define dependents (get-dependents seat))
+      (define-values (resolved-name make-thunk) (resolve unresolved-name dependents))
+      (if (hash-has-key? cache resolved-name)
+          (hash-ref cache resolved-name)
+          (let ([val (make-thunk dependents seat)])
+            (set! cache (hash-set cache resolved-name val))
+            val))))
+
+  (define seat
+    (case-lambda [() cache]
+                 [(unresolved-name) (unresolved-name->thunk unresolved-name)]))
+
+  seat)
+
+(define current-seat
+  (make-parameter (make-seat null-resolver)))
+
+(define (procure/weak unresolved-name)
+  ((current-seat) unresolved-name))
+
+(define (procure unresolved-name)
+  ((procure/weak unresolved-name)))
+
+(module+ test
   ; Scenario: The home page depends a page, which in turn depends on
   ; the home page. Conflating hyperlinks with dependency relationships
   ; is an error.  The above tests catch cycles with resolvers, but we
@@ -231,3 +243,103 @@
      (λ ()
        (parameterize ([current-seat seat])
          (procure "index.html"))))))
+
+
+;; ============================================================
+;; Cycle detection
+
+(define (get-dependents scope)
+  (hash-ref (get-dependents-lookup) scope null))
+
+(define-syntax-rule (dependent scope key body ...)
+  (enter-dependent-section scope key (λ () body ...)))
+
+(define mark-key (string->uninterned-symbol "unlike-assets:dependents"))
+
+(define (get-dependents-lookup)
+  (or (continuation-mark-set-first
+       (current-continuation-marks)
+       mark-key)
+      #hash()))
+
+(define (in-cycle? key dependents)
+  (and (list? dependents)
+       (member key dependents)
+       #t))
+
+(define (add-dependent scope key)
+  (define lookup (get-dependents-lookup))
+  (define dependents (cons key (get-dependents scope)))
+  (hash-set lookup scope dependents))
+
+(define (enter-dependent-section scope key proc)
+  (let ([dependents (get-dependents scope)])
+    (when (in-cycle? key dependents)
+      (raise-cycle-error scope key dependents))
+    (with-continuation-mark mark-key (add-dependent scope key)
+      (proc))))
+
+(module+ test
+  (define-syntax-rule (expect-cycle expected-scope expected-dependency-key expected-dependencies body ...)
+    (check-exn
+     (λ (e) (and (exn:fail:unlike-assets:cycle? e)
+                 (eq? (exn:fail:unlike-assets:cycle-scope e) expected-scope)
+                 (equal? (exn:fail:unlike-assets:cycle-dependency e) expected-dependency-key)
+                 (equal? (exn:fail:unlike-assets:cycle-dependents e) expected-dependencies)))
+     (λ () body ...)))
+
+  (define-syntax-rule (expect-no-cycle body ...)
+    (check-not-exn (λ () body ...)))
+
+  (test-case "Can detect cycles"
+    (expect-cycle
+     0 "a" '("a")
+     (dependent 0 "a" (dependent 0 "a" (void))))
+
+    (expect-cycle
+     0 "a" '("b" "a")
+     (dependent 0 "a" (dependent 0 "b" (dependent 0 "a" (void)))))
+
+    (expect-no-cycle (dependent 0 "a" (dependent 0 "b" (dependent 0 "c" (void)))))
+    (expect-no-cycle (dependent 1 "a" (dependent 0 "a" (void)))))
+
+  (test-case "Can trace dependents"
+    (check-equal?
+     (dependent 0 "a" (dependent 0 "b" (dependent 0 "c" (get-dependents 0))))
+     '("c" "b" "a"))))
+
+
+;; ============================================================
+;; Errors
+
+(struct exn:fail:unlike-assets:unresolved exn:fail
+  (name dependents))
+
+(struct exn:fail:unlike-assets:cycle exn:fail
+  (scope dependency dependents))
+
+(define (format-dependents-list dependents)
+  (format "dependents:~n~a"
+          (string-join
+           (map (λ (v) (format "  ~a" v)) dependents)
+           "\n")))
+
+(define (raise-name-resolution-error unresolved-name dependents)
+  (raise (exn:fail:unlike-assets:unresolved
+          (format "Cannot resolve name: ~v~n~a"
+                  unresolved-name
+                  (format-dependents-list dependents))
+          (current-continuation-marks)
+          unresolved-name
+          dependents)))
+
+(define (raise-cycle-error scope resolved-name dependents)
+  (raise (exn:fail:unlike-assets:cycle
+          (format "cycle in loading for ~v~nscope: ~v~n~a"
+                  resolved-name
+                  scope
+                  (format-dependents-list dependents))
+          (current-continuation-marks)
+          scope
+          resolved-name
+          dependents)))

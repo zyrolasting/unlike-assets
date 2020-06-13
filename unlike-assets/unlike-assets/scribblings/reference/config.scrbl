@@ -3,7 +3,7 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/runtime-path
-                    unlike-assets]]
+                    unlike-assets/config]]
 
 @title{Configuration}
 

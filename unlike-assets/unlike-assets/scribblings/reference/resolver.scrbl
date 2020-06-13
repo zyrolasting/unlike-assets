@@ -3,16 +3,14 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/file
-                    unlike-assets]
+                    unlike-assets/resolver]
                     "elements.rkt"]
 
-@title{Resolvers}
+@title{Writing Resolvers}
 
 @defmodule[unlike-assets/resolver]
 
-@racketmodname[unlike-assets/resolver] provides all bindings from
-@racketmodname[unlike-assets/resolver/exn] and
-@racketmodname[unlike-assets/resolver/thunk].
+@section{Resolvers}
 
 @defthing[resolver/c  (-> any/c list? (values any/c resolver-thunk-constructor/c))]{
 A procedure that represents a @tech{resolver}.
@@ -21,10 +19,9 @@ A @racket[resolver/c] procedure accepts two arguments, in this
 order: an @tech{unresolved name} and a @tech{dependents list}.
 
 The resolver must return two values. The first is a @tech{resolved
-name}. The second is a procedure that represents the next step towards
-a @tech{resolved value}.
+name}. The second is a @racket[resolver-thunk-constructor/c]
+procedure.
 }
-
 
 @defthing[resolver-thunk-constructor/c (-> list? (seat/c any/c) (-> any/c))]{
 A procedure built by a @tech{resolver}. It accepts a @tech{dependents list}
@@ -89,12 +86,12 @@ The following two expressions are therefore equivalent:
 ]
 }
 
+@section{Seats}
 
-@defthing[seat-cache/c (hash/c any/c value-thunk/c #:immutable #t)]{
+@defthing[seat-cache/c (hash/c any/c (-> any/c) #:immutable #t)]{
 A seat cache stores @tech{resolved names} as keys, and thunks as values.
 The thunks return @tech{resolved values}.
 }
-
 
 @defform[(seat/c contract-expr)]{
 Expands to a @tech/reference{chaperone contract} that recognizes a @tech{seat},
@@ -129,7 +126,7 @@ the relevant @racket[make-thunk] used in the resolver.
 A parameter that programs can use to share a seat.
 }
 
-@defproc[(procure/weak [unresolved-name any/c]) value-thunk/c]{
+@defproc[(procure/weak [unresolved-name any/c]) (-> any/c)]{
 Equivalent to @racket[((current-seat) unresolved-name)].
 
 Use this to populate a @tech{seat}'s cache while delaying the work to compute a value.
@@ -139,4 +136,40 @@ Use this to populate a @tech{seat}'s cache while delaying the work to compute a 
 Equivalent to @racket[((procure/weak unresolved-name))].
 
 Use this to compute a desired value from a loosely-defined name.
+}
+
+
+@section{Errors}
+
+@defstruct*[exn:fail:unlike-assets:unresolved ([name any/c] [dependents list?])]{
+An error raised when a resolver could not produce a @tech{resolved name}.
+
+@racket[name] is a reference to the exact name a user passed to a
+resolver.
+
+@racket[dependents] is a @tech{dependents list}. Assuming the name
+resolution error did not occur at all, the value named by the first
+element would be dependent on the resolved variant of @racket[name].
+
+}
+
+@defstruct*[exn:fail:unlike-assets:cycle ([scope procedure?] [dependency any/c] [dependents any/c])]{
+An error raised when a @tech{resolver} or a thunk it produced
+encounted a circular dependency.
+
+@racket[scope] is a procedure that would never terminate if it weren't
+for this exception.
+
+@racket[dependency] is a @tech{resolved name} of a resource that is
+already a dependent, and therefore cannot be resolved.
+
+@racket[dependents] is a @tech{dependents list}, where the value named
+by the first element is dependent on the value named by
+@racket[dependency].
+
+}
+
+@defproc[(raise-name-resolution-error [name any/c] [dependents list?]) any]{
+Raises @racket[exn:fail:unlike-assets:unresolved] with the given
+@racket[name], a preformatted message, and @racket[(current-continuation-marks)].
 }

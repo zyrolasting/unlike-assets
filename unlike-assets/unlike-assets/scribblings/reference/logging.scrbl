@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@require[@for-label[racket/base unlike-assets]]
+@require[@for-label[racket/base unlike-assets/logging]]
 
 @title{Logging}
 @defmodule[unlike-assets/logging]

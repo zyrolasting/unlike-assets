@@ -13,8 +13,3 @@ of Racket. You can treat CSS, SVG, JavaScript, and other resources as
 if they were software modules. In that sense, UA abstracts over
 creative frameworks so that you can create your own alternatives to
 Polyglot, Scribble, Frog, Universe, Pollen, etc.
-
-This repository tracks a contained ecosystem of packages centered
-around `unlike-assets`. The other packages stored here or in other
-repositories include extensions with additional dependencies, which is
-why they are not installed by default.

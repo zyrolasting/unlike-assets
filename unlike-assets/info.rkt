@@ -1,5 +1,3 @@
 #lang info
 
-(define collection 'multi)
-(define version "2.0")
-(define deps '("base" "search-upward"))
+(define scribblings '(("scribblings/reference/unlike-assets-reference.scrbl" (multi-page))))

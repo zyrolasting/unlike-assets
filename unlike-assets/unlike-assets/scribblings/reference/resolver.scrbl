@@ -169,7 +169,9 @@ by the first element is dependent on the value named by
 
 }
 
-@defproc[(raise-name-resolution-error [name any/c] [dependents list?]) any]{
+
+@defproc[(raise-name-resolution-error [name any/c] [dependents list?] [message string? "Cannot resolve name [...]"]) any]{
 Raises @racket[exn:fail:unlike-assets:unresolved] with the given
-@racket[name], a preformatted message, and @racket[(current-continuation-marks)].
+arguments. The default @racket[message] shows @racket[name] and a
+formatted view of @racket[dependents].
 }

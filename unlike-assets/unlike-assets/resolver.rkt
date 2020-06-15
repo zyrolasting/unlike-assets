@@ -31,10 +31,10 @@
  seat/c
  (struct-out exn:fail:unlike-assets:unresolved)
  (struct-out exn:fail:unlike-assets:cycle)
- raise-name-resolution-error
  (contract-out
   [resolver/c contract?]
   [resolver-thunk-constructor/c contract?]
+  [raise-name-resolution-error (->* (any/c list?) (string?) any)]
   [make-resolver (-> (-> any/c list? any/c)
                      (-> any/c list? (seat/c any/c) value-thunk/c)
                      resolver/c)]
@@ -319,16 +319,21 @@
   (scope dependency dependents))
 
 (define (format-dependents-list dependents)
-  (format "dependents:~n~a"
-          (string-join
-           (map (λ (v) (format "  ~a" v)) dependents)
-           "\n")))
+  (if (null? dependents)
+      "dependents: none"
+      (format "dependents:~n~a"
+              (string-join
+               (map (λ (v) (format "  ~a" v)) dependents)
+               "\n"))))
 
-(define (raise-name-resolution-error unresolved-name dependents)
+(define (raise-name-resolution-error unresolved-name
+                                     dependents
+                                     [message
+                                      (format "Cannot resolve name: ~v~n~a"
+                                              unresolved-name
+                                              (format-dependents-list dependents))])
   (raise (exn:fail:unlike-assets:unresolved
-          (format "Cannot resolve name: ~v~n~a"
-                  unresolved-name
-                  (format-dependents-list dependents))
+          message
           (current-continuation-marks)
           unresolved-name
           dependents)))

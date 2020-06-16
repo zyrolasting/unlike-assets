@@ -3,7 +3,8 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/runtime-path
-                    u/a]]
+                    u/a
+                    unlike-assets/config]]
 
 @title{Language}
 

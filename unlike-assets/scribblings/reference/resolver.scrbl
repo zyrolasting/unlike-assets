@@ -141,7 +141,7 @@ Use this to compute a desired value from a loosely-defined name.
 
 @section{Errors}
 
-@defstruct*[exn:fail:unlike-assets:unresolved ([name any/c] [dependents list?])]{
+@defstruct*[(exn:fail:unlike-assets:unresolved exn:fail) ([name any/c] [dependents list?])]{
 An error raised when a resolver could not produce a @tech{resolved name}.
 
 @racket[name] is a reference to the exact name a user passed to a
@@ -153,7 +153,7 @@ element would be dependent on the resolved variant of @racket[name].
 
 }
 
-@defstruct*[exn:fail:unlike-assets:cycle ([scope procedure?] [dependency any/c] [dependents any/c])]{
+@defstruct*[(exn:fail:unlike-assets:cycle exn:fail) ([scope procedure?] [dependency any/c] [dependents any/c])]{
 An error raised when a @tech{resolver} or a thunk it produced
 encounted a circular dependency.
 

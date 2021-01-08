@@ -44,6 +44,7 @@
   [seat-cache/c contract?]
   [current-seat (parameter/c (seat/c any/c))]
   [make-seat (->* (resolver/c) (seat-cache/c) (seat/c any/c))]
+  [make-seat/simple (->* () (#:cache seat-cache/c) #:rest (listof resolver/c) (seat/c any/c))]
   [procure/weak (-> any/c value-thunk/c)]
   [procure (-> any/c any/c)]))
 
@@ -89,7 +90,8 @@
 (define (null-resolver unresolved-name dependents)
   (raise-name-resolution-error unresolved-name dependents))
 
-
+(define (make-seat/simple #:cache [cache ((current-seat))] . resolvers)
+  (make-seat (apply rlist resolvers) cache))
 
 (module+ test
   (define (capitalize&join-dependencies unresolved-name dependents)

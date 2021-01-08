@@ -16,6 +16,9 @@ level contracts, see v1.6). The social contract is that you should not
 upgrade until you have reason to do so, and if you are starting out
 with this project, you should use the latest version.
 
+## [3.0] - 2021-01-08
+* Refactor for use with Xiden
+
 ## [2.0] - 2020-04-23
 * Refactor to multi-package solution centered around a module resolver.
 

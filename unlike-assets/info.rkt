@@ -1,3 +1,0 @@
-#lang info
-
-(define scribblings '(("scribblings/reference/unlike-assets-reference.scrbl" (multi-page))))

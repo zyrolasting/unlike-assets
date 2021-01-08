@@ -3,17 +3,66 @@
 @require[@for-label[racket/base
                     racket/contract
                     racket/file
-                    unlike-assets/resolver]
-                    "elements.rkt"]
+                    "lib.rkt"]]
 
-@title{Writing Resolvers}
+@(define (tech/reference str)
+   (tech #:doc '(lib "scribblings/reference/reference.scrbl") str))
 
-@defmodule[unlike-assets/resolver]
+@title{Unlike Assets}
+
+@declare-exporting["lib.rkt"]
+
+Let's say you write a Racket module that requires an SVG document
+called @racket{logo.svg} to work. Unlike Assets (UA) allows you to
+express that requirement as a dependency. Instead of writing
+@racket[require], you write @racket[procure], as in @racket[(procure
+"logo.svg")].
+
+UA allows you to define what @racket[(procure "logo.svg")] means in
+your programs. @racket{logo.svg} is an @tech{unresolved name}. An
+@deftech{unresolved name} is any Racket value used as input to a
+@tech{resolver}.
+
+A @deftech{resolver} is a procedure that maps an @tech{unresolved
+name} to a @deftech{resolved name} and a procedure that returns a
+@deftech{resolved value}. Both resolved names and resolved values
+can also be any Racket value.
+
+For example, a resolver could translate @racket{logo.svg} into a
+complete path and a procedure that returns an X-expression
+representing the SVG's contents.
+
+Resolvers can be composed, so that a resolver that handles SVG
+documents can forward requests to a resolver that handles JavaScript
+modules.
+
+A @deftech{seat} provides an entry point and cache for resolvers.  It
+helps ensure that values are only (re)loaded when necessary, and
+allows a resolver to request its own dependencies. This way, the
+aforementioned JavaScript resolver can depend on resources from the
+SVG resolver.
+
+@racket[procure] is just a front-end to @racket[(current-seat)]. That
+means that UA comes down to making a @tech{resolver}, making a
+@tech{seat} for that resolver, and putting that seat in
+@racket[current-seat] when needed. This controls how @racket[procure]
+translates its sole argument to something more useful.
+
+As a bonus, UA adds cycle detection support to all resolvers. It uses
+a @deftech{dependents list} when considering if a dependency cycle has
+occurred. A dependents list is a list of @tech{resolved names}, such
+that a value computed from the name in position @tt{N} is dependent on
+the value computed from the name in position @tt{N-1}. The value named
+by the first element is dependent on a value that is not yet
+represented in the dependents list. A programmer should interpret this
+gap using @racket[exn:fail:unlike-assets:cycle] or
+@racket[make-resolver].
+
 
 @section{Resolvers}
 
 @defthing[resolver/c  (-> any/c list? (values any/c resolver-thunk-constructor/c))]{
-A procedure that represents a @tech{resolver}.
+A procedure used as a @tech{resolver}.
 
 A @racket[resolver/c] procedure accepts two arguments, in this
 order: an @tech{unresolved name} and a @tech{dependents list}.
@@ -24,13 +73,16 @@ procedure.
 }
 
 @defthing[resolver-thunk-constructor/c (-> list? (seat/c any/c) (-> any/c))]{
-A procedure built by a @tech{resolver}. It accepts a @tech{dependents list}
-and a @tech{seat}, and returns a thunk. That thunk returns a @tech{resolved value}.
+A procedure built by a @tech{resolver}. It accepts a @tech{dependents
+list} and a @tech{seat}, and returns a thunk. That thunk returns a
+@tech{resolved value}.
 
-Both a @racket[resolver-thunk-constructor/c] procedure and the thunk it returns
-are allowed to use the @tech{seat} to request resources using @tech{unresolved names}.
-For this reason, they are both equipped with cycle detection. If a dependency cycle
-forms, the procedure caught in a cycle will raise a @racket[exn:fail:unlike-assets:cycle].
+Both a @racket[resolver-thunk-constructor/c] procedure and the thunk
+it returns are allowed to use the @tech{seat} to recursively request
+resources using @tech{unresolved names}.  For this reason, they are
+both equipped with cycle detection. If a dependency cycle forms, the
+procedure caught in a cycle will raise a
+@racket[exn:fail:unlike-assets:cycle].
 }
 
 
